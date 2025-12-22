@@ -43,332 +43,211 @@ export const JAMF_MODULES: Module[] = [
     ]
   },
   {
-    id: 'automated-enrollment',
-    title: '3. Automated MDM Enrollment',
-    description: 'Enrolling macOS and iOS devices using ADE.',
-    topics: [
-      {
-        id: 'ade-workflow',
-        title: 'Zero-Touch Deployment (ADE)',
-        shortExplanation: 'Automated Device Enrollment (ADE) connects Apple Business Manager to Jamf Pro for zero-touch setup.',
-        moderateExplanation: 'ADE (formerly DEP) allows corporate-owned devices to be automatically managed the moment they are powered on and connected to Wi-Fi. It makes management mandatory and prevents users from removing the MDM profile.',
-        detailedExplanation: 'The workflow starts in ABM/ASM where devices are assigned to the Jamf MDM server. When the device reaches the "Setup Assistant," it check-ins with Apple, which redirects it to Jamf. Jamf then pushes a "Prestage Enrollment" profile containing user settings, account types, and skip-logic for setup screens.',
-        industrialUseCase: 'Global logistics companies ship thousands of sealed MacBooks directly to employees\' homes. Employees sign in to Wi-Fi, and the device is fully configured with VPN, Mail, and Slack without IT ever touching the box.',
-        keyTakeaways: [
-          'Requires Apple Business Manager (ABM)',
-          'Supervision is automatic and unremovable',
-          'Zero-touch requires a Prestage Enrollment'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'setup-config',
-    title: '4. Setup & Configuration',
-    description: 'Initial device setup and user accounts.',
-    topics: [
-      {
-        id: 'initial-setup',
-        title: 'Post-Enrollment Setup',
-        shortExplanation: 'Configuration of device names, time zones, and user accounts after enrollment.',
-        moderateExplanation: 'Post-enrollment tasks ensure the device is ready for the user. This includes setting the local admin account, standard user accounts, and initial system settings like regional defaults.',
-        detailedExplanation: 'Through Jamf Prestage, admins can specify if the first user created is an admin or standard user. Admins also utilize scripts triggered by "Enrollment Complete" to set the computer name based on serial numbers or user attributes via the jamf binary: jamf setComputerName -name [NAME].',
-        industrialUseCase: 'Educational institutions set all student iPads to "Shared iPad" mode during enrollment to allow multiple students to log in with their Managed Apple IDs safely.',
-        keyTakeaways: [
-          'Prestage manages Setup Assistant screens',
-          'Scripts can automate naming conventions',
-          'Local accounts are defined during enrollment'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'user-environment',
-    title: '5. User Environment (.plist)',
-    description: 'Configuring settings and preferences.',
-    topics: [
-      {
-        id: 'profiles-plist',
-        title: 'Profiles & Managed Preferences',
-        shortExplanation: 'Configuration Profiles use MDM to enforce settings like Wi-Fi and passcodes via .plist files.',
-        moderateExplanation: 'Preferences on macOS are stored in Property List (.plist) files. Configuration Profiles (.mobileconfig) allow admins to manage these settings centrally. The system daemon "cfprefsd" manages the reading and writing of these preferences.',
-        detailedExplanation: 'Configuration profiles are XML files delivered over the air. They are stored in /Library/Managed Preferences on the client. Profiles can be scoped to users or computers. Admins can also manually deploy .plists via DMG packages to /Library/Preferences if an MDM payload is not available.',
-        industrialUseCase: 'Banking organizations enforce a 15-minute screen lock timeout and complex passcode requirements on all managed iPhones to comply with financial security regulations.',
-        keyTakeaways: [
-          'Mobileconfig files deliver MDM settings',
-          'Plists are standard macOS preference files',
-          'CFPrefsD handles preference caching'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'security',
-    title: '6. Security & Privacy',
-    description: 'Protecting devices and data.',
-    topics: [
-      {
-        id: 'security-frameworks',
-        title: 'FileVault & Gatekeeper',
-        shortExplanation: 'Encryption and security frameworks that protect the OS from unauthorized access and malware.',
-        moderateExplanation: 'Jamf manages native Apple security tools. FileVault encrypts the entire disk. Gatekeeper ensures only trusted apps run. PPPC (Privacy Preferences Policy Control) manages app permissions for cameras and microphones.',
-        detailedExplanation: 'For FileVault, Jamf captures the "Personal Recovery Key" (PRK) and stores it in the Jamf Pro inventory. Admins use MDM payloads to pre-approve system extensions (Kexts) and system permissions to prevent users from seeing "Security Blocked" popups.',
-        industrialUseCase: 'Healthcare providers use Jamf to enforce FileVault on all laptops to ensure patient data (HIPAA) is protected if a laptop is lost or stolen.',
-        keyTakeaways: [
-          'Recovery Keys are securely escrowed in Jamf',
-          'Gatekeeper blocks unsigned applications',
-          'PPPC profiles automate privacy approvals'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'app-distribution',
-    title: '7. Apps & Volume Purchasing',
-    description: 'Deploying App Store content.',
-    topics: [
-      {
-        id: 'vpp-abm',
-        title: 'Volume Purchasing (VPP)',
-        shortExplanation: 'Buying and distributing apps in bulk via Apple Business Manager.',
-        moderateExplanation: 'Organizations buy "licenses" for apps in ABM. These licenses are then synced to Jamf. Using "Device-based assignment," Jamf can install these apps on devices without requiring the user to sign in with an Apple ID.',
-        detailedExplanation: 'Syncing is handled via a VPP Token (.vpptoken). Admins can scope apps to Smart Groups. If an app is removed from a device, the license is returned to the "pool" in Jamf Pro to be reused by another user.',
-        industrialUseCase: 'A retail store deploys 500 "Point of Sale" apps across iPads in multiple locations. The apps are pushed automatically overnight using VPP, ensuring zero downtime for sales staff.',
-        keyTakeaways: [
-          'Licenses are owned by the organization',
-          'Device-based assignment skips Apple ID login',
-          'Tokens must be renewed annually'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'scripting',
-    title: '8. Scripting Overview',
-    description: 'Automating tasks with Bash and Zsh.',
-    topics: [
-      {
-        id: 'bash-basics',
-        title: 'Shell Scripting (Zsh/Bash)',
-        shortExplanation: 'Using the command line to automate complex tasks on macOS.',
-        moderateExplanation: 'Scripts allow admins to extend Jamf’s capabilities. Common tasks include changing settings, running maintenance, or calling the Jamf binary. While Bash was legacy, Zsh is the modern default for macOS.',
-        detailedExplanation: 'Jamf policies run scripts as the "root" user. Scripts utilize "Shebang" lines (e.g., #!/bin/zsh). Admins can pass up to 11 parameters from Jamf to the script. The jamf binary is a common command used within scripts (e.g., jamf recon to update inventory).',
-        industrialUseCase: 'IT teams use scripts to check the battery health of remote employee laptops. If health is below 80%, the script triggers an automated ticket in Zendesk for a battery replacement.',
-        keyTakeaways: [
-          'Root access for all Jamf-run scripts',
-          'Zsh is the default since macOS Catalina',
-          'Parameters 4-11 are custom for Jamf'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'refresh-reimage',
-    title: '9. Initial Setup & Refreshing',
-    description: 'Lifecycle management and reimaging.',
-    topics: [
-      {
-        id: 'refresh-workflows',
-        title: 'Erase All Content & Settings',
-        shortExplanation: 'Quickly resetting a device to factory settings for the next user.',
-        moderateExplanation: 'On modern Macs (Apple Silicon or T2), admins can trigger "Erase All Content and Settings" (EACAS) remotely. This instantly destroys the encryption key, making the data unrecoverable and the OS clean.',
-        detailedExplanation: 'EACAS is much faster than traditional "reimaging" (which is now deprecated by Apple). For older Macs, admins use the startosinstall binary with the --eraseinstall flag. For iOS, "Remote Wipe" performs a similar reset.',
-        industrialUseCase: 'At the end of a semester, a university IT department triggers a remote wipe on all lab computers, ensuring they are fresh and clean for the next cohort in minutes.',
-        keyTakeaways: [
-          'EACAS is the modern standard for resets',
-          'Traditional imaging is no longer supported',
-          'Remote Wipe is triggered via MDM commands'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'permissions',
-    title: '10. Ownership & Permissions',
-    description: 'Understanding macOS file access.',
-    topics: [
-      {
-        id: 'posix-acl',
-        title: 'POSIX & ACL Permissions',
-        shortExplanation: 'Rules that determine who can read, write, or execute files on a Mac.',
-        moderateExplanation: 'POSIX permissions define Owner, Group, and Everyone access using numeric (755) or symbolic (rwxr-xr-x) codes. ACLs (Access Control Lists) provide even more granular control for specific users or groups.',
-        detailedExplanation: 'Use the command ls -le to see both POSIX and ACLs. Use chmod to change permissions and chown to change ownership. Ownership is critical for the Jamf binary to run correctly, as most system files must be owned by "root" or "admin".',
-        industrialUseCase: 'Creative studios set specific ACLs on shared project folders, allowing "Designers" to read/write but "Clients" to only read, preventing accidental deletions.',
-        keyTakeaways: [
-          'Read=4, Write=2, Execute=1',
-          'ls -la shows hidden files and permissions',
-          'chown root:admin changes ownership'
-        ]
-      }
-    ]
-  },
-  {
     id: 'client-env-management',
-    title: '11. Client Env Management',
-    description: 'Managing multi-tenant Jamf and Intune environments.',
+    title: '11. Client Environment Management',
+    description: 'Advanced multi-tenant operations for MSPs and Global Enterprises.',
     topics: [
       {
         id: 'multi-tenant-ops',
-        title: 'Multi-Tenant Infrastructure (Jamf & Intune)',
-        shortExplanation: 'Managing Jamf Pro (on-prem/cloud) and Microsoft Intune across multiple client environments.',
-        moderateExplanation: 'Admins often handle multiple "tenants" or instances of Jamf Pro and Microsoft Intune. This involves balancing on-premise infrastructure requirements with cloud-native convenience while ensuring each client has a isolated but well-managed ecosystem.',
-        detailedExplanation: 'In an MSP or enterprise context, you use "Instances" or "Site" designations in Jamf Pro to separate client data. Intune requires a separate Azure AD tenant. You manage these via separate browser profiles or centralized management consoles to maintain clear boundaries while applying consistent logic.',
-        industrialUseCase: 'A global consultancy manages 15 separate Jamf Pro Cloud instances, each tailored to a different region\'s regulatory requirements, while maintaining a single "Master" Intune tenant for mobile devices.',
+        title: 'Multi-Tenant Jamf & Intune Management',
+        shortExplanation: 'Managing Jamf Pro (on-prem/cloud) and Microsoft Intune environments for multiple distinct clients.',
+        moderateExplanation: 'Admins in MSP or Global Enterprise roles must juggle multiple "tenants" or "instances". This involves maintaining separate Jamf Pro servers (either cloud-hosted or on-prem) alongside Microsoft Intune for mobile or cross-platform management.',
+        detailedExplanation: 'Management requires switching between different Jamf Pro URL contexts. In Intune, this involves Azure AD tenant switching. Key challenges include maintaining data isolation while applying similar logic across environments. On-prem instances require manual patching of Tomcat/MySQL, while Cloud instances are managed by Jamf/Microsoft.',
+        industrialUseCase: 'An MSP manages 20 clients. They use a central dashboard to monitor the "Health" of all 20 Jamf Pro instances, ensuring that no client environment falls out of sync with security requirements.',
         keyTakeaways: [
-          'Support both on-prem and cloud architectures',
-          'Manage Jamf and Intune concurrently',
-          'Maintain clear tenant isolation'
+          'Support for both On-Prem and Cloud Jamf architecture',
+          'Co-management with Microsoft Intune for hybrid fleets',
+          'Strict tenant isolation for data privacy'
         ]
       },
       {
-        id: 'onboarding-ops',
-        title: 'Client Onboarding & Policy Deployment',
-        shortExplanation: 'Handling the lifecycle of client onboarding and configuration deployment.',
-        moderateExplanation: 'Onboarding a new client involves configuring their unique management policies and profiles from scratch or using a template. This ensures that as soon as a client device is enrolled, it receives the necessary tools.',
-        detailedExplanation: 'The workflow starts with defining the "Onboarding Profile." Admins deploy "Prestage Enrollments" in Jamf or "Enrollment Profiles" in Intune. Policies include VPN, Wi-Fi, Security certificates, and the installation of initial management agents like the Jamf binary or Intune Management Extension.',
-        industrialUseCase: 'When a new department joins a large university, the Jamf admin creates a new "Site" and "Category," then clones existing standard policies to ensure the 50 new Macs are ready by Monday morning.',
+        id: 'onboarding-policies',
+        title: 'Client Onboarding & Deployment',
+        shortExplanation: 'Handling the initial configuration and deployment of management policies for new clients.',
+        moderateExplanation: 'Onboarding a new client involves setting up the technical foundation: creating management accounts, configuring Prestage Enrollments, and deploying the initial set of macOS policies and configuration profiles.',
+        detailedExplanation: 'Deployment involves scoping profiles (Wi-Fi, VPN, Certificates) to the "All Managed Clients" group or client-specific sites. Policies are triggered on "Enrollment Complete" to install the initial software stack (Office, Slack, Security Tools) via the jamf binary.',
+        industrialUseCase: 'When a new company is acquired, the IT team uses an "Onboarding Blueprint" in Jamf to instantly deploy 15 mandatory security profiles to the new fleet of 500 Macs.',
         keyTakeaways: [
-          'Automate initial configuration on enrollment',
-          'Deploy consistent policy sets via cloning/templates',
-          'Define onboarding milestones for new clients'
+          'Use Prestage Enrollments for zero-touch onboarding',
+          'Deploy initial profiles (VPN, Wi-Fi) immediately',
+          'Standardize deployment triggers (Enrollment Complete)'
         ]
       },
       {
         id: 'baseline-standardization',
-        title: 'Baseline Standardization',
-        shortExplanation: 'Maintaining consistent macOS baseline configurations across all client environments.',
-        moderateExplanation: 'To ensure stability and ease of support, admins standardized macOS baselines. This includes OS version limits, system setting defaults, and security benchmarks that apply to all devices regardless of the specific client.',
-        detailedExplanation: 'Baselines are enforced via "Managed Preferences" (.mobileconfig) and scripts. Admins use the "macOS Security Compliance Project" (mSCP) to generate standardized baselines based on NIST or CIS benchmarks, then deploy them as unified Configuration Profiles.',
-        industrialUseCase: 'An enterprise enforces a "macOS Sonoma 14.x" baseline. Any device running an older version is automatically put in a Smart Group that triggers a nag-screen and restricts access to Slack until they update.',
+        title: 'macOS Baseline Standardization',
+        shortExplanation: 'Standardizing and maintaining consistent macOS configurations across all client environments.',
+        moderateExplanation: 'To ensure a manageable support environment, admins maintain a "Baseline"—a set of configurations (OS version, system settings, security defaults) that are identical for every client.',
+        detailedExplanation: 'Baselines are enforced using the "macOS Security Compliance Project" (mSCP). This involves deploying specific Plists and Mobileconfigs that lock down system preferences. This ensures that no matter which client a device belongs to, it meets a minimum functional and security standard.',
+        industrialUseCase: 'A global firm enforces a "Sonoma 14.5" baseline. Any device that drifts from this version is automatically identified by a Smart Group and targeted for an OS update policy.',
         keyTakeaways: [
-          'Use NIST/CIS security benchmarks for baselines',
-          'Standardize system settings for easier support',
-          'Enforce baseline versioning across environments'
+          'Standardize configurations for easier support',
+          'Use mSCP for security-aligned baselines',
+          'Monitor baseline drift via Smart Groups'
+        ]
+      },
+      {
+        id: 'sla-enforcement',
+        title: 'SLA & Policy Enforcement',
+        shortExplanation: 'Ensuring consistent policy enforcement, device compliance, and security per client SLAs.',
+        moderateExplanation: 'Service Level Agreements (SLAs) define the required uptime and compliance state. Admins use Jamf to enforce these rules, ensuring devices stay compliant with the specific security needs of each client.',
+        detailedExplanation: 'Compliance is measured via Extension Attributes. If a device fails a check (e.g., Antivirus disabled), Jamf triggers a remediation policy. This ensures that the IT team meets the "99% compliance" SLA promised to the client.',
+        industrialUseCase: 'A law firm client has an SLA requiring 100% encryption. If a Mac user disables FileVault, Jamf detects it within 15 minutes and force-enables it, meeting the compliance SLA.',
+        keyTakeaways: [
+          'Link Smart Groups to SLA requirements',
+          'Automate remediation for non-compliant devices',
+          'Provide real-time compliance reporting to clients'
         ]
       }
     ]
   },
   {
-    id: 'mdm-admin-adv',
+    id: 'mdm-admin-mastery',
     title: '12. MDM Platform Administration',
-    description: 'Advanced administration of Jamf, Intune, and ABM.',
+    description: 'Advanced administration of workflows, integrations, and troubleshooting.',
     topics: [
       {
-        id: 'provisioning-workflows',
-        title: 'MDM Workflow Design (Provisioning/Patching)',
-        shortExplanation: 'Implementing automated workflows for device provisioning, compliance, and patching.',
-        moderateExplanation: 'Designing robust MDM workflows ensures that devices are provisioned correctly and remain patched throughout their lifecycle. This involves linking enrollment, inventory, and automated policy triggers.',
-        detailedExplanation: 'Provisioning uses ADE (DEP) to reach the Prestage Enrollment. Compliance is handled by Smart Groups that monitor OS version or app presence. Patching workflows utilize "Jamf App Installers" or custom scripts that use the `jamf` binary to check-in and install pending updates.',
-        industrialUseCase: 'A tech company uses a "Daily Health Check" policy. If a device hasn\'t patched a critical vulnerability in 3 days, it triggers an "Immediate Action" policy that force-reboots the Mac after a 10-minute warning.',
+        id: 'mdm-workflows',
+        title: 'MDM Workflows (Provisioning & Patching)',
+        shortExplanation: 'Designing and maintaining workflows for device provisioning, compliance, and OS patching.',
+        moderateExplanation: 'Workflows are the automated steps a device takes from the box to the user. This includes automated setup (Provisioning), daily health checks (Compliance), and keeping software current (Patching).',
+        detailedExplanation: 'Provisioning uses ADE to skip setup screens. Patching is handled via Jamf "App Installers" or the `softwareupdate` command in scripts. Compliance workflows monitor the device state and use "Conditional Access" to block resources if the device is unpatched.',
+        industrialUseCase: 'A tech startup uses a "Self-Service" provisioning workflow where users choose their own department-specific apps during the first 10 minutes of setup.',
         keyTakeaways: [
-          'Design lifecycle-aware workflows',
-          'Automate patching via Jamf App Installers',
-          'Link compliance to inventory data'
+          'Design automated provisioning via ADE',
+          'Implement automated OS and App patching',
+          'Link compliance state to corporate access'
         ]
       },
       {
-        id: 'abm-integration-adv',
-        title: 'ABM Integration (DEP/VPP)',
-        shortExplanation: 'Connecting MDM platforms with Apple Business Manager for DEP and VPP.',
-        moderateExplanation: 'Apple Business Manager (ABM) is the glue between Apple and your MDM. It handles serial number assignment (DEP) and volume license distribution (VPP), enabling zero-touch deployment.',
-        detailedExplanation: 'Tokens (APNs, VPP, DEP) must be renewed annually. Admins must manage "Location" tokens in VPP to separate budgets. Serial numbers are moved from "Unassigned" to the specific MDM server within ABM to ensure they hit the correct Prestage Enrollment during activation.',
-        industrialUseCase: 'A global retailer buys 1,000 iPads. They assign them in ABM to their "In-Store" Jamf server. The iPads are shipped directly to stores, and when unboxed, they immediately lock to the store management profile.',
+        id: 'abm-integration',
+        title: 'ABM Integration (DEP & VPP)',
+        shortExplanation: 'Integrating MDM with Apple Business Manager for automated enrollment and app distribution.',
+        moderateExplanation: 'ABM is the portal where you manage hardware (DEP) and software (VPP). Integrating it with Jamf allows you to assign devices to your server and distribute app licenses without Apple IDs.',
+        detailedExplanation: 'The integration uses "Server Tokens" (.p7m for DEP, .vpptoken for VPP). Admins assign serial numbers in ABM to the Jamf Pro MDM server. This ensures that when the device is first turned on, it "phones home" to Apple and is redirected to your Jamf instance.',
+        industrialUseCase: 'A hospital buys 200 iPads. They buy the licenses for a "Patient Charting" app in VPP and assign the serials in DEP. The iPads arrive at the hospital and are managed before they even touch the Wi-Fi.',
         keyTakeaways: [
-          'Renew APNs and VPP tokens annually',
-          'Assign serials in ABM before unboxing',
-          'Device-based VPP assignment skips Apple IDs'
+          'DEP enables mandatory, unremovable MDM',
+          'VPP allows for device-based app licensing',
+          'Tokens must be renewed every 365 days'
+        ]
+      },
+      {
+        id: 'cert-identity',
+        title: 'Certificates & Identity Integration',
+        shortExplanation: 'Managing certificates, profiles, and device identity across client environments.',
+        moderateExplanation: 'Certificates are the "ID Cards" of the management world. They secure communication and identify devices. Integrating with Identity Providers (IdPs) like Okta or Azure AD ensures only the right people get managed devices.',
+        detailedExplanation: 'Admins manage SCEP (Simple Certificate Enrollment Protocol) for automated cert delivery. Identity integration (Jamf Connect) allows users to sign in to their Mac using their cloud credentials (SAML/OIDC), syncing the local password with the enterprise identity.',
+        industrialUseCase: 'A bank uses certificates to identify "Corporate Managed" devices. If a device doesn\'t have the specific client certificate, it is blocked from the corporate Wi-Fi network.',
+        keyTakeaways: [
+          'Use SCEP for automated certificate deployment',
+          'Integrate with Okta/Azure for Modern Auth',
+          'Profiles carry the certificates to the client'
         ]
       },
       {
         id: 'mdm-troubleshooting',
-        title: 'MDM Troubleshooting & Communication',
-        shortExplanation: 'Diagnosing MDM command failures, profile issues, and device communication problems.',
-        moderateExplanation: 'When management fails, it\'s usually a break in communication between the device, APNs, and the MDM server. Troubleshooting requires looking at log files and verifying network connectivity.',
-        detailedExplanation: 'Key tools include `sudo jamf log` and the "Console.app" on macOS. Admins check if the device can reach `17.0.0.0/8` (APNs). Common issues include "Management Deadlock" where multiple profiles conflict, or "Token Mismatch" which requires a re-enrollment.',
-        industrialUseCase: 'A device stops receiving profiles. The admin runs `jamf mdm` on the client and sees a "Signature Invalid" error, identifying that the MDM certificate was replaced and the client needs a binary refresh.',
+        title: 'MDM Troubleshooting & Command Failures',
+        shortExplanation: 'Diagnosing MDM command failures, profile deployment issues, and communication problems.',
+        moderateExplanation: 'When a profile doesn\'t land or a command gets "stuck", you need to investigate the communication path between Jamf, Apple (APNs), and the device.',
+        detailedExplanation: 'Troubleshooting starts with the command `sudo jamf mdm` and checking `/var/log/jamf.log`. Admins check the "Management" tab in Jamf Pro for "Pending" or "Failed" commands. Common causes include expired APNs certs, closed ports (5223), or local database corruption on the client.',
+        industrialUseCase: 'An admin notices 50 Macs aren\'t receiving a new Wi-Fi profile. They check the APNs logs and see a "Token Expired" error, identifying that the user had manually removed a system keychain item.',
         keyTakeaways: [
-          'Verify APNs connectivity (Port 5223)',
-          'Check local logs for MDM command errors',
-          'Use Console.app to trace MDM daemon (mdmclient)'
+          'Verify APNs port 5223 is open',
+          'Check jamf.log for MDM binary errors',
+          'Flush failed commands to re-trigger deployment'
         ]
       }
     ]
   },
   {
-    id: 'app-packaging-automation',
+    id: 'packaging-automation',
     title: '13. Application Packaging & Automation',
-    description: 'Advanced software deployment pipelines.',
+    description: 'Advanced software deployment and repository management.',
     topics: [
       {
-        id: 'pkg-development',
+        id: 'pkg-dev',
         title: 'Advanced Packaging (Munki/AutoPkg/Composer)',
-        shortExplanation: 'Developing and maintaining macOS application packages (.pkg, .dmg, .app).',
-        moderateExplanation: 'Packaging involves wrapping applications in a format that the OS can install silently. While Composer is great for snapshots, Munki and AutoPkg are used for automating the "fetch and wrap" of common web apps.',
-        detailedExplanation: 'Admins create "Recipes" in AutoPkg to automate the download, package creation, and upload to Jamf. Munki serves as an alternative self-service portal. Jamf Composer is used for "Diffing" (before/after snapshots) to capture complex config changes into a DMG.',
-        industrialUseCase: 'A creative agency uses AutoPkg to update the entire Adobe Creative Cloud suite. The recipe runs every Saturday night, ensuring designers always have the latest bug fixes on Monday.',
+        shortExplanation: 'Developing and maintaining macOS packages (.pkg, .dmg, .app) using specialized tools.',
+        moderateExplanation: 'Manual installation is inefficient. Packaging tools allow you to "wrap" apps for silent, automated deployment. Composer is great for custom snapshots, while AutoPkg automates the downloading of the latest versions.',
+        detailedExplanation: 'Admins use Jamf Composer to capture "Diffs"—the files created during a manual install—into a PKG. Munki is often used alongside Jamf for a more robust Self-Service app repository. AutoPkg uses "Recipes" (XML files) to check for updates and build packages automatically.',
+        industrialUseCase: 'An admin uses AutoPkg to update Chrome across 2,000 Macs. The recipe runs daily, downloads the latest PKG, and uploads it to Jamf without the admin lifting a finger.',
         keyTakeaways: [
-          'Use Composer for complex config snapshots',
-          'AutoPkg automates the repetitive fetch-cycle',
-          'Standardize package naming for clean inventory'
+          'Composer captures custom configuration changes',
+          'AutoPkg automates the fetch-and-build cycle',
+          'Munki provides advanced repository features'
         ]
       },
       {
         id: 'cicd-pipelines',
-        title: 'CI/CD Deployment Pipelines (GitHub/Azure)',
-        shortExplanation: 'Automating packaging and testing pipelines via GitHub Actions or Azure DevOps.',
-        moderateExplanation: 'Modern Mac management uses DevOps principles. Code-based configurations are stored in Git, and pipelines automate the building, testing, and deployment of packages to the MDM.',
-        detailedExplanation: 'A GitHub Action is triggered on a "Push". The action runs a `munki-import` or `jamf-upload` tool. This ensures that no package reaches production without passing through a "Testing" Jamf category first.',
-        industrialUseCase: 'A fintech firm keeps all their Jamf scripts in a GitHub repo. When a script is edited and merged, an Azure DevOps pipeline automatically updates the script body inside Jamf Pro via the API.',
+        title: 'Packaging & Deployment Pipelines',
+        shortExplanation: 'Automating deployment pipelines via GitHub Actions or Azure DevOps.',
+        moderateExplanation: 'Modern IT uses DevOps. Instead of manually uploading files, packages and scripts are stored in Git. Pipelines then automatically test and deploy these files to the production Jamf server.',
+        detailedExplanation: 'A GitHub Action is triggered when a script is pushed to the "Main" branch. The action uses the Jamf Pro API to upload the script. This ensures that every change is version-controlled, reviewed, and tested before it reaches a user\'s Mac.',
+        industrialUseCase: 'A global company uses Azure DevOps. When a new version of their internal app is ready, the pipeline builds the PKG, runs a "Sanity Check" on a test Mac, and then promotes it to the global Jamf repository.',
         keyTakeaways: [
-          'Version control all scripts and manifests',
-          'Automate testing before production rollout',
-          'Use runners (GitHub/Azure) for remote builds'
+          'Version-control all management code (Git)',
+          'Automate testing with CI/CD runners',
+          'Reduce human error in the deployment cycle'
         ]
       },
       {
-        id: 'remediation-scripts',
-        title: 'Post-Install & Remediation Scripting',
-        shortExplanation: 'Building scripts to enhance deployment reliability and fix issues automatically.',
-        moderateExplanation: 'Installation is only half the battle. Post-install scripts handle licensing and configuration, while remediation scripts monitor for failures and attempt a "self-heal".',
-        detailedExplanation: 'Post-install scripts run as part of the PKG or as a "Policy Script". Remediation scripts use "Extension Attributes" in Jamf to flag issues, and a policy then runs the fix script (e.g., re-installing a missing security agent).',
-        industrialUseCase: 'A security tool fails to start. A remediation script checks the process every hour. If it\'s not running, it executes `launchctl load` and sends a notification to the IT helpdesk.',
+        id: 'repo-management',
+        title: 'Software Repository Management',
+        shortExplanation: 'Maintaining and version-controlling client-specific software repositories.',
+        moderateExplanation: 'Organizations need to know exactly which version of software is deployed. Maintaining a clean repository involves organizing apps by version, client, and testing status.',
+        detailedExplanation: 'Admins use "Cloud Distribution Points" (CDP) or "Jamf Cloud Distribution Service" (JCDS). Version control in the repo ensures that if a new version breaks things, the admin can instantly roll back to a known-good previous version stored in the manifest.',
+        industrialUseCase: 'During a software audit, the admin pulls a report from their version-controlled repository to show exactly when each version of Zoom was approved and deployed over the last year.',
         keyTakeaways: [
-          'Use post-install for license registration',
-          'Remediation scripts should be idempotent',
-          'Link fix-actions to inventory health triggers'
+          'Keep a historical record of all packages',
+          'Use Cloud Distribution for global reach',
+          'Implement a clear naming and versioning convention'
         ]
       }
     ]
   },
   {
-    id: 'scripting-tooling-adv',
+    id: 'scripting-tooling',
     title: '14. Scripting & Tooling',
     description: 'Custom automation with Python, Zsh, and APIs.',
     topics: [
       {
-        id: 'polyglot-automation',
-        title: 'Cross-Platform Automation (Bash/Zsh/Python)',
+        id: 'automation-scripts',
+        title: 'Bash, Zsh & Python Automation',
         shortExplanation: 'Creating scripts to automate configuration, deployment, and compliance checks.',
-        moderateExplanation: 'Zsh is the default, but Python is more powerful for data handling and API interactions. Admins use these to automate repetitive tasks that the MDM UI cannot handle natively.',
-        detailedExplanation: 'Bash/Zsh are used for quick system tasks (filesystem, permissions). Python is used for "Heavy Lifting"—parsing JSON from APIs, multi-threaded tasks, or complex logic. Scripts are deployed via Jamf Policies and run as the root user.',
-        industrialUseCase: 'An admin writes a Python script that compares the local hardware list against a procurement CSV, identifying "Ghost Devices" that are in the MDM but were never officially purchased.',
+        moderateExplanation: 'Scripts are the "Swiss Army Knife" of Mac management. While Zsh is the macOS default, Python is used for more complex logic like data parsing and API communication.',
+        detailedExplanation: 'Scripts run as "root" on the client. Admins use Bash/Zsh for system tasks (modifying Plists, setting permissions). Python is preferred for interacting with APIs (using the `requests` library) or handling complex JSON data from inventory reports.',
+        industrialUseCase: 'An admin writes a Zsh script that checks the "Battery Health" of a laptop. If health is below 80%, the script triggers an automated ticket in ServiceNow for a replacement.',
         keyTakeaways: [
-          'Zsh is the standard for macOS system tasks',
-          'Python is ideal for complex API and data logic',
-          'Maintain script portability and documentation'
+          'Zsh is the default macOS shell',
+          'Python is ideal for complex data/API logic',
+          'Test all scripts in a "User Context" vs "Root Context"'
         ]
       },
       {
-        id: 'api-workflows-adv',
-        title: 'API Integration (Jamf/Intune/Munki)',
+        id: 'api-workflows',
+        title: 'API Automation (Jamf, Intune, Munki)',
         shortExplanation: 'Leveraging APIs to develop custom automation and reporting workflows.',
-        moderateExplanation: 'The API allows you to programmatically control the MDM. You can pull massive inventory reports, update thousands of devices at once, or integrate Jamf with other tools like Slack or ServiceNow.',
-        detailedExplanation: 'Jamf Pro uses the "Classic API" (XML) and "Pro API" (JSON). Intune uses the "Microsoft Graph API". Admins write "Middlewares" (often in AWS Lambda or Python) to bridge these tools, ensuring data consistency.',
-        industrialUseCase: 'When a new employee is hired in Workday, a custom script calls the Jamf API to create a "Static Group" with their name and assigns a specific "Welcome Package" policy to it.',
+        moderateExplanation: 'The API allows different management tools to talk to each other. You can use the Jamf API to pull data into a custom dashboard or to trigger actions in Intune based on Jamf inventory.',
+        detailedExplanation: 'Jamf Pro uses the Classic API (XML) and the Pro API (JSON). Admins use `curl` or Python to GET device info or POST configuration changes. This enables "Cross-Platform" automation where a change in one system triggers an update in another.',
+        industrialUseCase: 'A company uses the Jamf API to automatically move Macs into a "Legal Hold" group when an employee is terminated in the HR system (Workday).',
         keyTakeaways: [
-          'Use Jamf Pro API for JSON-based modern logic',
-          'Graph API handles Microsoft Intune automation',
-          'Secure all API credentials using Secrets/Keys'
+          'Use Jamf Pro API for modern JSON logic',
+          'Bridge different tools via API middleware',
+          'Secure API credentials with least-privilege'
+        ]
+      },
+      {
+        id: 'cicd-promotion',
+        title: 'CI/CD & Environment Promotion',
+        shortExplanation: 'Promoting changes between client environments (Dev -> Prod) using automation.',
+        moderateExplanation: 'You should never test a new policy on a CEO\'s laptop. Environment promotion involves moving a configuration from a "Dev" (Testing) instance to a "Prod" (Production) instance only after it passes checks.',
+        detailedExplanation: 'Admins use "Environment Sync" scripts. A policy is created in "Jamf Dev". Once tested, a CI/CD pipeline clones that policy (using the API) to the "Jamf Production" environment, ensuring the settings are identical and human error is removed.',
+        industrialUseCase: 'A Mac admin updates a Wi-Fi profile. They push it to the "Dev" Jamf. After 24 hours with no errors, they click "Promote" in their pipeline, and the API copies the profile to the global production server.',
+        keyTakeaways: [
+          'Maintain separate Dev and Prod instances',
+          'Automate policy cloning via API',
+          'Ensure testing happens before global rollout'
         ]
       }
     ]
@@ -376,45 +255,45 @@ export const JAMF_MODULES: Module[] = [
   {
     id: 'security-compliance-adv',
     title: '15. Security & Compliance',
-    description: 'Enforcing baselines and attestation.',
+    description: 'Enforcing client-specific security and audit readiness.',
     topics: [
       {
-        id: 'security-enforcement',
-        title: 'Security Baseline Enforcement',
-        shortExplanation: 'Enforcing client-specific security baselines, FileVault, and compliance policies.',
-        moderateExplanation: 'Security is enforced through configuration profiles and monitoring. This ensures every device has disk encryption enabled, a complex password, and all system security features (SIP, Gatekeeper) active.',
-        detailedExplanation: 'FileVault is enforced via an MDM payload that escrows the Recovery Key. Password policies are delivered via the "Passcode" payload. Compliance is monitored using "Extension Attributes"—if a device fails a check, it is moved to a "Non-Compliant" Smart Group.',
-        industrialUseCase: 'A law firm requires all Macs to have a 5-minute screen lock. The admin deploys a profile. If a user tries to change it via System Settings, the MDM instantly overrides and reapplies the 5-minute limit.',
+        id: 'security-baselines',
+        title: 'Security Baselines & Encryption',
+        shortExplanation: 'Enforcing FileVault, password policies, and security baselines.',
+        moderateExplanation: 'Security baselines are the "Laws" of the device. Admins use Jamf to enforce disk encryption (FileVault) and ensure that every user has a strong, unique password that complies with corporate policy.',
+        detailedExplanation: 'FileVault is enforced via a "Security & Privacy" configuration profile. Jamf escrows the "Personal Recovery Key" (PRK) so IT can unlock the disk if the user forgets their password. Password complexity is enforced via a "Passcode" payload that dictates length, age, and character types.',
+        industrialUseCase: 'A financial firm requires a 15-character password. Jamf enforces this. If a user tries to set "password123", the OS blocks them and points them to the security requirements.',
         keyTakeaways: [
-          'Escrow FileVault Recovery Keys securely',
-          'Enforce password complexity via MDM',
-          'Monitor SIP and Gatekeeper status'
+          'Always escrow FileVault Recovery Keys',
+          'Enforce password age and complexity',
+          'Use Config Profiles for unremovable security'
         ]
       },
       {
-        id: 'attestation-reporting',
-        title: 'Device Attestation & Compliance Reporting',
-        shortExplanation: 'Implementing device attestation, inventory accuracy, and real-time compliance reporting.',
-        moderateExplanation: 'Attestation proves the device is what it says it is. Compliance reporting provides the "audit trail" that security teams need to verify that all devices are protected.',
-        detailedExplanation: 'Device Attestation uses Apple\'s secure hardware (T2/Apple Silicon) to provide a cryptographic proof of identity. Jamf "Inventory Reports" are scheduled to go to the Security Team every week, highlighting any devices with missing security tools.',
-        industrialUseCase: 'During a SOC2 audit, the admin provides a dashboard showing that 100% of the fleet has "Gatekeeper" enabled, with a timestamped log for every device as proof.',
+        id: 'attestation-inventory',
+        title: 'Attestation & Inventory Accuracy',
+        shortExplanation: 'Implementing device attestation and maintaining accurate inventory for reporting.',
+        moderateExplanation: 'How do you know a Mac is actually a corporate Mac? Attestation uses secure hardware to prove the device\'s identity. Accuracy ensures that your compliance reports are truthful.',
+        detailedExplanation: 'Device Attestation uses the Secure Enclave to sign a challenge from the MDM. Inventory accuracy is maintained by running "Recon" (inventory updates) daily. This ensures that when an auditor asks for a list of encrypted devices, the data is current.',
+        industrialUseCase: 'During a security audit, the admin provides a "Cryptographic Proof" that all 500 laptops are genuine corporate assets and haven\'t been tampered with at the hardware level.',
         keyTakeaways: [
-          'Use hardware-based attestation where possible',
-          'Schedule automated compliance reports',
-          'Ensure inventory accuracy for audits'
+          'Use "Recon" to keep inventory fresh',
+          'Hardware-backed attestation is the gold standard',
+          'Audit inventory for "Ghost Devices" (stale records)'
         ]
       },
       {
-        id: 'remediation-audits',
+        id: 'vulnerability-remediation',
         title: 'Vulnerability Remediation & Audits',
-        shortExplanation: 'Supporting vulnerability remediation and coordinating with security teams for compliance audits.',
-        moderateExplanation: 'IT and Security must work together. When a vulnerability is found (e.g., a Zero-Day in Safari), IT uses the MDM to rapidly patch the fleet and provides reports back to the security team.',
-        detailedExplanation: 'Admins use "Vulnerability Management" integrations (like Jamf Protect or Tenable). Remediation involves "Urgent Policies" that bypass standard schedules. Audit support involves providing "Snapshot Reports" of the fleet at a specific point in time.',
-        industrialUseCase: 'A critical macOS bug is released. The security team identifies 400 vulnerable Macs. The Jamf admin triggers a "Force Update" policy and, 4 hours later, provides a report showing only 5 devices are left offline.',
+        shortExplanation: 'Coordinating with security teams to fix vulnerabilities and pass compliance audits.',
+        moderateExplanation: 'Security teams find the bugs; IT teams fix them. Remediation involves using Jamf to rapidly deploy patches for "Zero-Day" vulnerabilities and providing proof of the fix for audits.',
+        detailedExplanation: 'Remediation is handled by "Urgent Policies" that bypass standard maintenance windows. For audits (like SOC2 or HIPAA), admins generate reports showing the time between a vulnerability being discovered and its successful remediation on the fleet.',
+        industrialUseCase: 'A critical "Webkit" vulnerability is found. The security team notifies the Mac Admin. Within 2 hours, a Jamf policy targets all vulnerable Macs with a force-update and provides a progress dashboard to the CSO.',
         keyTakeaways: [
-          'Coordinate patch cycles with Security Teams',
-          'Rapidly deploy "Zero-Day" remediation',
-          'Maintain historical logs for compliance audits'
+          'Prioritize Zero-Day patching',
+          'Maintain a clear "Audit Trail" of all fixes',
+          'Coordinate closely with Security/SOC teams'
         ]
       }
     ]
