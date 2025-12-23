@@ -6,7 +6,7 @@ import QuizView from './components/QuizView.tsx';
 import ScenarioView from './components/ScenarioView.tsx';
 import { JAMF_MODULES } from './constants.tsx';
 import { ViewState } from './types.ts';
-import { BookOpenText, Target, Laptop2, Sparkles, ArrowLeft, Loader2 } from 'lucide-react';
+import { BookOpenText, Target, Laptop2, Sparkles, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { askAssistant } from './services/gemini.ts';
 
 const App: React.FC = () => {
@@ -45,6 +45,12 @@ const App: React.FC = () => {
   };
 
   const handleAiQuery = async (query: string) => {
+    if (!process.env.API_KEY) {
+      setAiResponse("Missing API Key. Please configure API_KEY in your Vercel Project Settings.");
+      setViewState('ai-search');
+      return;
+    }
+
     setAiLoading(true);
     setViewState('ai-search');
     setLastQuery(query);
@@ -52,7 +58,7 @@ const App: React.FC = () => {
       const response = await askAssistant(query, `Current Module: ${currentModule.title}`);
       setAiResponse(response);
     } catch (e) {
-      setAiResponse("Sorry, I encountered an error while searching. Please check your internet connection.");
+      setAiResponse("Sorry, I encountered an error while searching. Please check your internet connection or API Key configuration.");
     } finally {
       setAiLoading(false);
     }
@@ -68,6 +74,13 @@ const App: React.FC = () => {
       onAiQuery={handleAiQuery}
       isAiLoading={aiLoading}
     >
+      {!process.env.API_KEY && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-sm">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p>AI features are disabled. Please add your <b>API_KEY</b> to Vercel Environment Variables.</p>
+        </div>
+      )}
+
       {viewState !== 'ai-search' && (
         <div className="flex bg-slate-200/50 p-1.5 rounded-2xl mb-10 w-fit">
           <button 
@@ -153,7 +166,7 @@ const App: React.FC = () => {
 
       <footer className="mt-20 border-t border-slate-100 pt-10 text-center">
         <p className="text-slate-400 text-sm">
-          Jamf 200 MasterClass • Browser-compiled Static Application
+          Jamf 200 MasterClass • Interactive Web Edition
         </p>
       </footer>
     </Layout>
