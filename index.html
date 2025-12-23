@@ -5,32 +5,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Jamf 200 MasterClass Guide</title>
-    
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Babel standalone allows running TSX/JSX directly in the browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f8fafc;
-        margin: 0;
-      }
+      body { font-family: 'Inter', sans-serif; background-color: #f8fafc; margin: 0; }
       #root:empty::before {
-        content: "Preparing MasterClass Guide...";
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        color: #64748b;
-        font-size: 0.875rem;
-        font-weight: 500;
+        content: "Loading MasterClass Guide...";
+        display: flex; justify-content: center; align-items: center; height: 100vh;
+        color: #64748b; font-size: 0.875rem;
       }
     </style>
-
     <script type="importmap">
 {
   "imports": {
@@ -47,37 +32,19 @@
   </head>
   <body>
     <div id="root"></div>
-
+    <script>window.process = { env: { API_KEY: "" } };</script>
+    <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
     <script>
-      // Polyfill process.env
-      window.process = window.process || { env: { API_KEY: "" } };
-    </script>
-
-    <!-- 
-      By using src="index.tsx" with type="text/babel", Babel-standalone 
-      will fetch the file and transpile it correctly before execution.
-    -->
-    <script 
-      src="index.tsx"
-      type="text/babel" 
-      data-type="module" 
-      data-presets="react,typescript"
-    ></script>
-
-    <script>
-      // Global error listener to help you debug
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
-        if (url.includes('babel')) return; // Ignore internal babel errors
-        console.error('App Error:', msg, '\nFile:', url, '\nLine:', lineNo);
+      window.onerror = function(msg, url, line, col, error) {
+        if (url.includes('babel')) return;
         const root = document.getElementById('root');
         if (root && root.innerHTML === "") {
-           root.innerHTML = `<div style="padding: 20px; color: red; font-family: sans-serif;">
-             <h2>Load Error</h2>
-             <p>${msg}</p>
-             <small>Check browser console for details. Ensure all files are in the root directory.</small>
-           </div>`;
+          root.innerHTML = `<div style="padding: 40px; color: #ef4444; text-align: center;">
+            <h1 style="font-size: 24px; font-weight: bold;">Application Error</h1>
+            <p style="margin-top: 10px;">${msg}</p>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">Check browser console for details.</p>
+          </div>`;
         }
-        return false;
       };
     </script>
   </body>
