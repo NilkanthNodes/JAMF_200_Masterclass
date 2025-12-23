@@ -1,28 +1,31 @@
 
 import React from 'react';
-import Layout from './components/Layout';
-import ModuleContent from './components/ModuleContent';
-import QuizView from './components/QuizView';
-import ScenarioView from './components/ScenarioView';
-import { JAMF_MODULES } from './constants';
-import { ViewState } from './types';
+import Layout from './components/Layout.tsx';
+import ModuleContent from './components/ModuleContent.tsx';
+import QuizView from './components/QuizView.tsx';
+import ScenarioView from './components/ScenarioView.tsx';
+import { JAMF_MODULES } from './constants.tsx';
+import { ViewState } from './types.ts';
 import { BookOpenText, Target, Laptop2, Sparkles, ArrowLeft, Loader2 } from 'lucide-react';
-import { askAssistant } from './services/gemini';
+import { askAssistant } from './services/gemini.ts';
 
 const App: React.FC = () => {
   const [currentModuleId, setCurrentModuleId] = React.useState(JAMF_MODULES[0].id);
   const [viewState, setViewState] = React.useState<ViewState>('reading');
   const [completedTopicIds, setCompletedTopicIds] = React.useState<string[]>(() => {
-    const saved = localStorage.getItem('jamf200_progress');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('jamf200_progress');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
   
-  // AI Search State
   const [aiResponse, setAiResponse] = React.useState<string | null>(null);
   const [aiLoading, setAiLoading] = React.useState(false);
   const [lastQuery, setLastQuery] = React.useState('');
 
-  const currentModule = JAMF_MODULES.find(m => m.id === currentModuleId)!;
+  const currentModule = JAMF_MODULES.find(m => m.id === currentModuleId) || JAMF_MODULES[0];
   const totalTopics = JAMF_MODULES.reduce((acc, m) => acc + m.topics.length, 0);
 
   const toggleComplete = (topicId: string) => {
@@ -49,7 +52,7 @@ const App: React.FC = () => {
       const response = await askAssistant(query, `Current Module: ${currentModule.title}`);
       setAiResponse(response);
     } catch (e) {
-      setAiResponse("Sorry, I encountered an error while searching. Please ensure an API key is configured or check your connection.");
+      setAiResponse("Sorry, I encountered an error. Please ensure you have set your API_KEY in the environment variables.");
     } finally {
       setAiLoading(false);
     }
@@ -65,7 +68,6 @@ const App: React.FC = () => {
       onAiQuery={handleAiQuery}
       isAiLoading={aiLoading}
     >
-      {/* Navigation Tabs (only if not in AI search) */}
       {viewState !== 'ai-search' && (
         <div className="flex bg-slate-200/50 p-1.5 rounded-2xl mb-10 w-fit">
           <button 
@@ -92,7 +94,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Dynamic Content Views */}
       <div className="pb-20">
         {viewState === 'ai-search' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -119,15 +120,12 @@ const App: React.FC = () => {
                         <p className="text-slate-500 font-medium animate-pulse">Consulting the Knowledge Base...</p>
                      </div>
                    ) : (
-                     <div className="prose prose-slate max-w-none prose-headings:text-blue-900 prose-p:text-slate-700 prose-code:bg-slate-100 prose-code:p-1 prose-code:rounded prose-pre:bg-slate-900 prose-pre:text-slate-200">
+                     <div className="prose prose-slate max-w-none prose-headings:text-blue-900 prose-p:text-slate-700">
                         {aiResponse?.split('\n').map((line, i) => (
                            <p key={i} className="mb-4 whitespace-pre-wrap">{line}</p>
                         ))}
                      </div>
                    )}
-                </div>
-                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                  AI-Generated technical guidance for Jamf Certified Tech exam.
                 </div>
              </div>
           </div>
