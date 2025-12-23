@@ -7,7 +7,7 @@ import {
   Briefcase, Check, ArrowLeft, Loader2, RefreshCw, Trophy, 
   BrainCircuit, Terminal, Lightbulb, ChevronDown, ChevronUp, ShieldCheck, 
   Cpu, Settings, Package, UserCheck, Key, ShoppingCart, Code2, Eraser, 
-  Lock, Network, Settings2, Workflow, Box, Globe
+  Lock, Network, Settings2, Workflow, Box, Globe, MessageSquare, Plus, Trash2, Eye
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -21,6 +21,7 @@ interface Topic {
   detailedExplanation: string;
   industrialUseCase: string;
   keyTakeaways: string[];
+  visualType: 'terminal' | 'plist' | 'diagram' | 'ui';
 }
 
 interface Module {
@@ -40,7 +41,7 @@ interface QuizQuestion {
 
 type ViewState = 'reading' | 'quiz' | 'scenario' | 'ai-search';
 
-// --- 2. Data (Jamf 200 Full 15-Module Curriculum) ---
+// --- 2. Expanded Data (Jamf 200 Full 15-Module Curriculum) ---
 
 const JAMF_MODULES: Module[] = [
   {
@@ -52,10 +53,11 @@ const JAMF_MODULES: Module[] = [
       id: 'server-arch',
       title: 'Server Architecture',
       shortExplanation: 'Jamf Pro is a Java web app running on Tomcat with a MySQL database.',
-      moderateExplanation: 'The Jamf Pro server (JSS) is built on a Java stack. It uses Apache Tomcat as the web server and MySQL/MariaDB for the database. Admins interact with the Web UI primarily on port 443.',
-      detailedExplanation: 'Technically, Jamf Pro is a WAR file deployed to a Tomcat servlet container. The database stores all settings, inventory, and encryption keys. Clients communicate via the MDM protocol and the Jamf Binary. Key ports: 443 (HTTPS/MDM), 80 (HTTP/Redirects), 3306 (MySQL Internal). For cloud environments, this is managed in AWS.',
-      industrialUseCase: 'Enterprise setups use Jamf Cloud for automatic scaling and high availability, ensuring the MDM remains reachable globally.',
-      keyTakeaways: ['Java/Tomcat/MySQL Stack', 'Port 443 is primary', 'WAR file deployment']
+      moderateExplanation: 'The Jamf Pro server (JSS) is built on a high-performance Java stack. It uses Apache Tomcat as the primary servlet container to serve the web application and MySQL or MariaDB for the relational database. It is the brain of your Apple ecosystem management.',
+      detailedExplanation: 'Jamf Pro functions as a Java Web Archive (WAR) file deployed within an Apache Tomcat environment. The Tomcat server manages HTTPS traffic (typically on port 443) for both administrative access and device check-ins. The MySQL database schema contains every object in the environment—from computer inventory records to policy definitions and FileVault recovery keys. On macOS, the Jamf agent binary communicates with the server via the REST API and a specific tasking protocol. On iOS, communication happens strictly via the Apple MDM protocol. Critical server file paths include /Library/JSS/ (on macOS servers) or /var/lib/jamf/ (on Linux servers) where log files and database configuration (DataBase.xml) are stored. For cloud-hosted environments, Jamf manages the underlying AWS infrastructure, providing automatic scaling and redundant data centers.',
+      industrialUseCase: 'Large enterprises use Jamf Cloud for its global availability, ensuring that a remote worker in Tokyo and an admin in London can both reach the server simultaneously without local network latency.',
+      keyTakeaways: ['Java/Tomcat/MySQL Stack', 'Port 443 is required for MDM', 'WAR file acts as the application layer', 'Database stores all persistent settings'],
+      visualType: 'terminal'
     }]
   },
   {
@@ -67,10 +69,11 @@ const JAMF_MODULES: Module[] = [
       id: 'pkg-formats',
       title: 'PKG vs DMG',
       shortExplanation: '.pkg is an installer; .dmg is a disk image.',
-      moderateExplanation: 'Packages (.pkg) are standard Apple installers that support pre/post-install scripts. Disk Images (.dmg) are file containers that Jamf mounts to copy files directly.',
-      detailedExplanation: 'Jamf Composer creates both. Snapshots capture filesystem changes into a DMG. PKGs are preferred for complex apps needing install logic. The jamf binary uses `installer -pkg` for packages and `hdiutil` for images.',
-      industrialUseCase: 'Use PKG for Microsoft Office to run post-install registration; use DMG for a set of fonts or desktop wallpapers.',
-      keyTakeaways: ['PKG = Scripts + Logic', 'DMG = Simple File Copy', 'Composer is the primary tool']
+      moderateExplanation: 'Packages (.pkg) are standard Apple flat installers that support complex logic through scripts. Disk Images (.dmg) are virtual volumes used for direct block-copy file deployments.',
+      detailedExplanation: 'A .pkg file is a structured container used by the Apple Installer service (/usr/sbin/installer). It can include "Preinstall" and "Postinstall" scripts that run before and after the binary payload is dropped. This is essential for apps that need to register a license or stop a service before updating. A .dmg is a compressed image of a filesystem. When Jamf deploys a DMG, it mounts the image to a temporary path, copies the files to the designated destination, and then unmounts it. Jamf Composer is the gold standard tool for creating both: it can "Snapshot" a system by scanning the filesystem before and after an app installation to capture exactly what changed. For enterprise deployment, PKGs are generally preferred because they respect the native macOS installation framework and logging systems.',
+      industrialUseCase: 'Use a PKG for a security agent like CrowdStrike to ensure the registration script runs post-install; use a DMG for a set of corporate fonts that simply need to be copied into /Library/Fonts.',
+      keyTakeaways: ['PKG supports pre/post-install logic', 'DMG is for simple file-to-file copy', 'Composer is used for Snapshotting', 'Installer service handles PKG execution'],
+      visualType: 'ui'
     }]
   },
   {
@@ -82,10 +85,11 @@ const JAMF_MODULES: Module[] = [
       id: 'ade-workflow',
       title: 'ADE (DEP) Workflow',
       shortExplanation: 'ABM + Jamf = Zero-Touch Setup.',
-      moderateExplanation: 'Automated Device Enrollment (ADE) makes MDM mandatory and unremovable. Devices are assigned to Jamf in Apple Business Manager (ABM).',
-      detailedExplanation: 'When a new device starts, it contacts Apple. Apple directs it to Jamf’s Prestage Enrollment. The device receives its management profile during the Setup Assistant, skipping user screens as configured.',
-      industrialUseCase: 'Global companies ship sealed laptops to remote staff; users log in to Wi-Fi and the device auto-configures.',
-      keyTakeaways: ['Requires ABM account', 'Unremovable MDM profile', 'Configured via Prestage']
+      moderateExplanation: 'Automated Device Enrollment (ADE) is the cornerstone of modern Apple management. It links your hardware purchases directly to your Jamf server via Apple Business Manager.',
+      detailedExplanation: 'The ADE workflow begins when an organization buys a device from Apple or an authorized reseller. The device serial number is automatically synced to the organization\'s Apple Business Manager (ABM) portal. Inside ABM, the admin assigns those serial numbers to their Jamf Pro MDM server. When a user powers on a shrink-wrapped Mac, it connects to Wi-Fi and queries Apple’s servers for its "Management Status." Apple redirects the device to the Jamf "Prestage Enrollment" URL. The Mac then downloads the Management Profile, which can make management mandatory and unremovable. During this "Setup Assistant" phase, the admin can choose to skip screens like Siri, Touch ID, or Location Services to speed up the onboarding process. This "Zero-Touch" approach ensures IT never has to touch the box, significantly reducing deployment costs and time.',
+      industrialUseCase: 'A startup with no physical office ships laptops directly from the factory to new hires in 10 different countries. The devices auto-enroll and configure themselves as soon as the user logs in.',
+      keyTakeaways: ['Requires ABM or ASM account', 'MDM profile can be made unremovable', 'Setup Assistant screens can be suppressed', 'Serial numbers must be assigned in ABM first'],
+      visualType: 'diagram'
     }]
   },
   {
@@ -97,10 +101,11 @@ const JAMF_MODULES: Module[] = [
       id: 'local-accounts',
       title: 'User Account Management',
       shortExplanation: 'Managing local admin and standard users.',
-      moderateExplanation: 'Jamf can create a local administrator account during enrollment and define whether the primary user is an admin or standard user.',
-      detailedExplanation: 'The Jamf management account is a hidden admin used for binary operations. User accounts created via Prestage can be managed or standard. FileVault enablement depends on these account types.',
-      industrialUseCase: 'Creating a "TechSupport" admin account on every Mac for hands-on troubleshooting.',
-      keyTakeaways: ['Management Account is hidden', 'Prestage defines user types', 'Local accounts can be restricted']
+      moderateExplanation: 'Jamf allows admins to define exactly how local user accounts are created during the initial setup phase of a Mac or iOS device.',
+      detailedExplanation: 'User account configuration is primarily handled within the Jamf Prestage Enrollment settings. Admins can choose to create a hidden "Management Account"—a local administrator that the Jamf Binary uses to perform high-privilege tasks without the user\'s knowledge. For the end-user, the admin can decide if the account they create during Setup Assistant is an Administrator or a Standard User. Creating a Standard User is a common security best practice (Principle of Least Privilege). Additionally, Jamf can integrate with Cloud Identity Providers (IdP) like Okta or Azure AD using "Jamf Connect" to allow users to log in with their corporate email credentials, which then creates a local account that stays in sync with their cloud password. This bridges the gap between local macOS accounts and enterprise directory services.',
+      industrialUseCase: 'An organization creates a "TechSupport" admin account on every Mac for hands-on troubleshooting while keeping the actual employee as a Standard User to prevent unauthorized software installs.',
+      keyTakeaways: ['Management Account is for binary tasks', 'Prestage defines user privileges', 'Cloud IDP integration via Jamf Connect', 'Standard vs Admin is a key security decision'],
+      visualType: 'ui'
     }]
   },
   {
@@ -112,10 +117,11 @@ const JAMF_MODULES: Module[] = [
       id: 'config-profiles',
       title: 'Configuration Profiles',
       shortExplanation: 'MDM settings delivered via .mobileconfig.',
-      moderateExplanation: 'Configuration Profiles use the Apple MDM framework to enforce settings like Wi-Fi, VPN, and Passcode policies.',
-      detailedExplanation: 'Profiles are XML files signed by Jamf. They are pushed to `/Library/Managed Preferences`. They override local user settings, ensuring compliance.',
-      industrialUseCase: 'Pushing a Wi-Fi profile so employees automatically connect to the office network.',
-      keyTakeaways: ['Uses MDM framework', 'Enforces settings', 'XML based (.mobileconfig)']
+      moderateExplanation: 'Configuration Profiles are the primary way to enforce system settings and restrictions on Apple devices via the native MDM framework.',
+      detailedExplanation: 'A Configuration Profile is an XML-based file (.mobileconfig) that contains a set of "Payloads"—key-value pairs that define specific settings like Wi-Fi credentials, VPN configurations, or Passcode requirements. When Jamf pushes a profile, it is delivered over-the-air via the Apple Push Notification service (APNs). On the client Mac, these settings are written to /Library/Managed Preferences/. Managed preferences take precedence over local Plists, effectively "locking" the setting in the UI so the user cannot change it. The `cfprefsd` daemon handles the caching and reading of these preferences. If a user attempts to manually edit a managed plist, the system will revert the change based on the profile instruction. Profiles can be "Scoped" to specific groups of computers or users, ensuring that only relevant settings are applied to the appropriate hardware.',
+      industrialUseCase: 'Deploying a "Restricted Software" profile that disables the App Store or specific System Settings like iCloud Drive for contractors who handle sensitive data.',
+      keyTakeaways: ['Delivered via APNs', 'XML structure (.mobileconfig)', 'Managed Preferences take precedence', 'Payloads define specific settings'],
+      visualType: 'plist'
     }]
   },
   {
@@ -127,10 +133,11 @@ const JAMF_MODULES: Module[] = [
       id: 'filevault-prk',
       title: 'FileVault & PRK',
       shortExplanation: 'Disk encryption with key escrow.',
-      moderateExplanation: 'Jamf enforces FileVault and stores the Personal Recovery Key (PRK) in the inventory.',
-      detailedExplanation: 'Encryption is triggered via MDM. The PRK is captured by the binary and sent to the JSS. IT can retrieve this key if a user is locked out.',
-      industrialUseCase: 'Ensuring 100% encryption for healthcare devices to meet HIPAA compliance.',
-      keyTakeaways: ['PRK is escrowed', 'Enforced by Profile', 'Prevents data theft']
+      moderateExplanation: 'Jamf manages the native FileVault 2 encryption engine, ensuring all corporate data is protected at rest with secure key storage.',
+      detailedExplanation: 'Full Disk Encryption on macOS is performed by FileVault 2. Jamf triggers this through a Configuration Profile payload. During the encryption process, a Personal Recovery Key (PRK) is generated. A critical feature of Jamf is "Key Escrow": the Jamf Binary captures this PRK and sends it securely to the Jamf Pro database. If a user forgets their password, an IT admin can log into the Jamf Pro console, retrieve the PRK, and use it to unlock the disk. Modern Macs with Apple Silicon or T2 chips use hardware-accelerated encryption, making the process nearly instantaneous. Admins can also use "Institutional Recovery Keys" (IRKs), which is a master key for the whole fleet, though PRKs are generally preferred for higher security as they are unique to each individual device.',
+      industrialUseCase: 'A lawyer loses their laptop at an airport. Because FileVault was enforced and the PRK was stored in Jamf, the firm can prove the data was encrypted, avoiding a mandatory data breach notification.',
+      keyTakeaways: ['PRK is unique and escrowed', 'Enforced by MDM Profile', 'Essential for compliance (HIPAA/GDPR)', 'Hardware-backed on modern Macs'],
+      visualType: 'terminal'
     }]
   },
   {
@@ -142,10 +149,11 @@ const JAMF_MODULES: Module[] = [
       id: 'vpp-licensing',
       title: 'Volume Purchasing',
       shortExplanation: 'Buying apps in bulk from Apple Business Manager.',
-      moderateExplanation: 'Organizations buy licenses in ABM and sync them to Jamf using a VPP Token. Apps can be assigned to devices without an Apple ID.',
-      detailedExplanation: 'Device-based assignment allows silent installation. App licenses can be reclaimed and redistributed when a device is retired.',
-      industrialUseCase: 'Deploying Microsoft Outlook to 500 iPads simultaneously without user interaction.',
-      keyTakeaways: ['ABM Integration', 'Device-based assignment', 'No Apple ID needed']
+      moderateExplanation: 'The Volume Purchase Program (VPP) allows organizations to buy, distribute, and reclaim App Store licenses centrally through Jamf.',
+      detailedExplanation: 'Organizations purchase app licenses through Apple Business Manager (ABM). These licenses are linked to Jamf Pro using a VPP Token (.vpptoken), which must be renewed every 365 days. Jamf allows for two types of assignment: "User-based" (requires an Apple ID) and "Device-based" (the modern standard). Device-based assignment allows Jamf to push the app directly to the device serial number without requiring the user to sign into the App Store or even have an Apple ID. This is critical for shared iPads or corporate-owned Macs. If a device is retired or the user leaves the company, the license can be "Revoked" in the Jamf console and returned to the license pool, allowing it to be assigned to a new device. This ensures the organization retains ownership of all software purchases.',
+      industrialUseCase: 'A hospital deploys a custom medical chart app to 1,000 iPads. Using Device-based VPP, the app installs silently overnight, and no doctor needs to manage an individual Apple ID.',
+      keyTakeaways: ['ABM/ASM Integration', 'Device-based assignment skips Apple ID', 'Licenses are organization-owned', 'VPP Tokens require annual renewal'],
+      visualType: 'ui'
     }]
   },
   {
@@ -157,10 +165,11 @@ const JAMF_MODULES: Module[] = [
       id: 'jamf-binary-scripts',
       title: 'The Jamf Binary',
       shortExplanation: 'Scripts extend Jamf capabilities using shell commands.',
-      moderateExplanation: 'Jamf runs scripts as the "root" user. Scripts can use the `jamf` binary to trigger actions like inventory updates (`jamf recon`).',
-      detailedExplanation: 'Shebang lines like `#!/bin/zsh` specify the interpreter. Parameters 4-11 in Jamf are used to pass custom variables to scripts.',
-      industrialUseCase: 'Running a script to check battery health and reporting it as an Extension Attribute.',
-      keyTakeaways: ['Runs as root', 'Zsh is default', 'Custom parameters 4-11']
+      moderateExplanation: 'Scripting is the "Swiss Army Knife" of Jamf management, allowing admins to automate almost any task that can be performed via the command line.',
+      detailedExplanation: 'Jamf policies can execute shell scripts written in Zsh (current default) or Bash. Scripts run with "Root" privileges, meaning they have full access to the system. A key feature is the use of "Parameters": Jamf reserves parameters 1 (mount point), 2 (computer name), and 3 (username), while allowing admins to pass custom data in parameters 4 through 11. This allows a single script to be reused across different policies by just changing the parameter values in the UI. Common commands inside scripts include `jamf recon` (to update inventory), `jamf policy` (to trigger check-ins), and `systemsetup`. Admins should always include a "Shebang" line (e.g., #!/bin/zsh) at the very top of the script to ensure the correct interpreter is used. Scripting is vital for "Extension Attributes"—custom pieces of inventory data that Jamf doesn\'t collect by default, such as battery health or specific app versions.',
+      industrialUseCase: 'Writing a script that checks if a specific security software is running. If it isn\'t, the script starts the service and then runs `jamf recon` to notify the server that the device is back in compliance.',
+      keyTakeaways: ['Runs as root user', 'Zsh is the default interpreter', 'Parameters 4-11 are custom', 'Extension Attributes use script output'],
+      visualType: 'terminal'
     }]
   },
   {
@@ -172,10 +181,11 @@ const JAMF_MODULES: Module[] = [
       id: 'remote-wipe',
       title: 'Erase All Content & Settings',
       shortExplanation: 'Rapidly resetting a device for a new user.',
-      moderateExplanation: 'On modern Macs (T2/Silicon), Jamf can trigger EACAS to instantly wipe user data while keeping the OS intact.',
-      detailedExplanation: 'Traditional imaging is dead. We use MDM commands to wipe devices. For older Macs, we use the `startosinstall` binary with `--eraseinstall`.',
-      industrialUseCase: 'Quickly resetting lab computers at the end of a semester.',
-      keyTakeaways: ['EACAS is fast', 'MDM remote wipe', 'No more imaging']
+      moderateExplanation: 'Modern macOS "Imaging" has been replaced by rapid reset workflows that use native hardware encryption to wipe data in seconds.',
+      detailedExplanation: 'Traditional imaging—wiping a drive and dropping a block-copy OS—is deprecated. Modern Macs use a "System Volume" that is cryptographically signed and read-only. To reset a Mac, we use "Erase All Content and Settings" (EACAS). On Macs with Apple Silicon or a T2 chip, Jamf can trigger this via a simple MDM command. The system securely destroys the encryption keys for the "Data Volume," making the data unrecoverable instantly, and then resets the OS to its "Out of Box" state. For older Macs, admins use the `startosinstall` binary with the `--eraseinstall` flag, which downloads a fresh OS installer and wipes the drive before installing. This lifecycle management ensures that when an employee leaves, their device can be prepared for the next user in minutes rather than hours.',
+      industrialUseCase: 'A university IT department needs to reset 200 lab computers at the end of the day. They send a single "Remote Wipe" command from the Jamf console, and all 200 Macs are ready for the next class by the time the lab opens.',
+      keyTakeaways: ['EACAS is the modern standard', 'Traditional imaging is dead', 'Remote Wipe uses MDM commands', 'Hardware encryption enables instant wipes'],
+      visualType: 'diagram'
     }]
   },
   {
@@ -187,10 +197,11 @@ const JAMF_MODULES: Module[] = [
       id: 'posix-permissions',
       title: 'POSIX & ACLs',
       shortExplanation: 'Rules for file access: Read, Write, Execute.',
-      moderateExplanation: 'macOS uses POSIX (Owner, Group, Everyone) and Access Control Lists (ACLs) for granular permission management.',
-      detailedExplanation: 'Permissions are checked by the kernel. Commands like `chmod` and `chown` are used in scripts to ensure the Jamf binary has access to files.',
-      industrialUseCase: 'Fixing permissions on a shared folder so multiple users can collaborate.',
-      keyTakeaways: ['Read/Write/Execute', 'Root is 0', 'ACLs are more granular']
+      moderateExplanation: 'macOS uses a combination of traditional POSIX permissions and granular Access Control Lists (ACLs) to manage security and access.',
+      detailedExplanation: 'POSIX permissions are the foundation: every file has an Owner, a Group, and "Everyone" else. Access is defined by Read (4), Write (2), and Execute (1). For example, "755" means the owner can do everything, while others can only read and execute. Beyond POSIX, macOS uses Access Control Lists (ACLs), which allow you to grant specific permissions to multiple users or groups on a single file—something POSIX cannot do. In Terminal, `ls -la` shows POSIX, while `ls -le` shows ACLs. Ownership is changed via `chown` and permissions via `chmod`. Jamf admins must understand these when packaging software; if a package has incorrect permissions, the app may fail to launch or users may be able to delete critical system files. macOS also utilizes "Permissions Repair" and "System Integrity Protection" (SIP) to prevent even root users from modifying core system folders.',
+      industrialUseCase: 'A video production house sets an ACL on their "Final Renders" folder so that the "Editors" group can write files, but the "Marketing" group can only read them, preventing accidental edits to finished work.',
+      keyTakeaways: ['Owner, Group, Everyone model', 'Read/Write/Execute bits', 'ls -le displays ACLs', 'chmod and chown are core tools'],
+      visualType: 'terminal'
     }]
   },
   {
@@ -202,10 +213,11 @@ const JAMF_MODULES: Module[] = [
       id: 'multi-tenant',
       title: 'Multi-Tenant Infrastructure',
       shortExplanation: 'Managing multiple Jamf and Intune instances.',
-      moderateExplanation: 'Admins often manage Jamf Cloud alongside Microsoft Intune for cross-platform compliance and multi-client support.',
-      detailedExplanation: 'Managing separate "Sites" in Jamf or separate tenants in Azure. Standardizing baselines across these environments is key to scalability.',
-      industrialUseCase: 'A global agency managing 20 different client Jamf servers from one central team.',
-      keyTakeaways: ['Tenant Isolation', 'Intune Integration', 'Baseline Standardization']
+      moderateExplanation: 'Managing a diverse fleet often involves juggling multiple management platforms and tenant environments to maintain security and isolation.',
+      detailedExplanation: 'In an enterprise or MSP environment, admins often manage "Multi-Tenant" setups. In Jamf Pro, this can be done via "Sites"—virtual partitions within one server—or separate Jamf Cloud instances for complete isolation. Increasingly, macOS admins must also manage "Coexistence" with Microsoft Intune. This is often handled via "Jamf Cloud Connector" or "Device Compliance," where Jamf manages the Mac (because it has superior Apple features), but Intune provides the "Conditional Access" check. If Jamf reports a Mac is compliant (encrypted, patched), Intune allows that Mac to access Office 365 data. This ensures that only managed, secure devices can touch company resources. Standardizing these configurations across multiple clients or departments requires strict version control and clear naming conventions for policies and groups.',
+      industrialUseCase: 'An MSP manages 50 small business clients. They use one Jamf Pro server with 50 different "Sites" to ensure Client A cannot see Client B\'s devices, but the MSP can manage all of them from one dashboard.',
+      keyTakeaways: ['Sites provide logical separation', 'Intune integration via Cloud Connector', 'Conditional Access enforces compliance', 'Standardization enables scalability'],
+      visualType: 'ui'
     }]
   },
   {
@@ -217,10 +229,11 @@ const JAMF_MODULES: Module[] = [
       id: 'workflow-design',
       title: 'MDM Workflow Design',
       shortExplanation: 'Building enrollment and patching cycles.',
-      moderateExplanation: 'Designing the "Lifecycle" of a device: from Enrollment (ADE) to Patching (Policies) to Retirement (Wipe).',
-      detailedExplanation: 'Integrating ABM for serial assignment. Troubleshooting MDM command failures by checking the APNs connection and local logs.',
-      industrialUseCase: 'Creating a "Day 1" policy that installs all essential apps immediately after enrollment.',
-      keyTakeaways: ['Lifecycle management', 'APNs is critical', 'ABM Integration']
+      moderateExplanation: 'Effective MDM administration is about designing automated lifecycles that keep devices secure and up-to-date with minimal manual work.',
+      detailedExplanation: 'Administration begins with designing the "Enrollment" workflow (Prestage). Once enrolled, devices enter a "Maintenance" phase where "Smart Groups" act as the logic engine. A Smart Group might monitor if a Mac is missing a specific security patch; as soon as it is, the Mac "falls into" the group, which triggers a "Patch Policy" to install the update. Troubleshooting these workflows requires an understanding of the communication chain: Device <-> APNs <-> Jamf. If a command isn\'t working, admins check the APNs status (on port 5223) and the local `mdmclient` logs using the `log show` command. Regularly "Cleaning" the environment—deleting old policies, retiring unused packages, and auditing API accounts—is essential for maintaining a fast, reliable management platform.',
+      industrialUseCase: 'A Jamf admin designs a "Self-Healing" workflow: an Extension Attribute checks if the antivirus is running. If it stops, the Mac enters a Smart Group that triggers a policy to re-install the AV software automatically.',
+      keyTakeaways: ['Smart Groups provide automation logic', 'APNs is the critical heartbeat', 'mdmclient logs are for troubleshooting', 'Regular maintenance prevents bloat'],
+      visualType: 'diagram'
     }]
   },
   {
@@ -232,10 +245,11 @@ const JAMF_MODULES: Module[] = [
       id: 'autopkg-cicd',
       title: 'CI/CD Packaging',
       shortExplanation: 'Automating the download and packaging of apps.',
-      moderateExplanation: 'Using AutoPkg to automatically fetch the latest versions of apps and GitHub Actions to deploy them to Jamf.',
-      detailedExplanation: 'Building a "Packaging Pipeline" where a script checks for updates, builds a PKG with Composer/AutoPkg, and uploads it to Jamf via API.',
-      industrialUseCase: 'Keeping Chrome and Zoom updated across 10,000 Macs without manual intervention.',
-      keyTakeaways: ['AutoPkg saves time', 'GitHub Actions automation', 'API based uploads']
+      moderateExplanation: 'Modern packaging utilizes automated tools to fetch, wrap, and deploy applications, removing the need for manual "Download and Upload" cycles.',
+      detailedExplanation: 'Admins use "AutoPkg"—an open-source framework—to automate the task of checking for new software versions. AutoPkg uses "Recipes" (XML plists) that tell it where to find the download (e.g., GitHub or a vendor URL), how to verify it, and how to turn it into a Jamf-compatible PKG. These recipes can be integrated into CI/CD pipelines using GitHub Actions or Azure DevOps. When a vendor releases a new version of Chrome, the pipeline automatically detects it, builds the package, uploads it to a "Testing" category in Jamf, and notifies the admin. This "Shift-Left" approach ensures software is patched faster and with fewer human errors. Munki is another common tool used alongside Jamf for its superior "Self-Service" catalog and dependency management, allowing apps to be installed only when certain conditions are met.',
+      industrialUseCase: 'An IT team uses AutoPkg to manage 50 common apps (Zoom, Slack, Chrome). Instead of manually updating them every week, the apps are updated automatically by a server, saving the team 10+ hours of manual work every month.',
+      keyTakeaways: ['AutoPkg uses Recipes for automation', 'CI/CD pipelines reduce human error', 'Patch management becomes "Hands-Off"', 'Munki manages complex dependencies'],
+      visualType: 'terminal'
     }]
   },
   {
@@ -247,10 +261,11 @@ const JAMF_MODULES: Module[] = [
       id: 'api-automation',
       title: 'Jamf Pro API',
       shortExplanation: 'Using code to talk to the Jamf Server.',
-      moderateExplanation: 'The Jamf Pro API (Classic XML or Modern JSON) allows for massive automation tasks like updating thousands of records.',
-      detailedExplanation: 'Writing Python scripts to parse JSS data. Leveraging the Intune Graph API for cross-platform reporting.',
-      industrialUseCase: 'Building a custom dashboard that shows real-time patch compliance for every client.',
-      keyTakeaways: ['JSON/XML API', 'Python for logic', 'Custom Reporting']
+      moderateExplanation: 'The Jamf Pro API allows developers and admins to interact with server data programmatically, enabling massive scale and custom integrations.',
+      detailedExplanation: 'Jamf Pro offers two APIs: the "Classic API" (which uses XML) and the modern "Jamf Pro API" (which uses JSON and Bearer Token authentication). The API allows you to perform "CRUD" operations: Create, Read, Update, and Delete records. For example, you can write a Python script that pulls a list of all iPads with low storage and sends a customized notification to those users. Authentication is a key security factor: admins should use "API Roles and Clients" to grant specific, limited permissions (e.g., Read-only access to inventory) rather than using a full admin account. Tooling like "Jamf Pro PowerToys" or custom Swift apps can leverage these APIs to build dashboards or custom inventory portals that aren\'t available in the standard Web UI.',
+      industrialUseCase: 'A company integrates Jamf with their HR system (Workday). When an employee is marked as "Terminated" in Workday, a script automatically calls the Jamf API to lock their Mac and trigger a Remote Wipe.',
+      keyTakeaways: ['Classic (XML) vs Pro (JSON) APIs', 'Bearer Token authentication is standard', 'API Roles enforce least privilege', 'Enables integration with HR and Security tools'],
+      visualType: 'terminal'
     }]
   },
   {
@@ -262,15 +277,16 @@ const JAMF_MODULES: Module[] = [
       id: 'security-baselines',
       title: 'Security Compliance',
       shortExplanation: 'Enforcing NIST/CIS security benchmarks.',
-      moderateExplanation: 'Using Jamf to enforce a "Security Baseline" like disabling Bluetooth or enforcing 8-character passwords.',
-      detailedExplanation: 'Implementing the macOS Security Compliance Project (mSCP). Coordinating with audit teams to provide proof of encryption and patching.',
-      industrialUseCase: 'Passing a security audit by showing a report of all encrypted devices.',
-      keyTakeaways: ['Audit Readiness', 'NIST/CIS Benchmarks', 'Compliance reporting']
+      moderateExplanation: 'Ensuring your Apple fleet meets global security standards like CIS or NIST through automated enforcement and reporting.',
+      detailedExplanation: 'Security compliance is more than just settings; it\'s about "Attestation." Admins use the "macOS Security Compliance Project" (mSCP) to generate tailored security baselines based on frameworks like NIST 800-53 or the CIS Benchmark. These baselines are converted into Configuration Profiles and Scripts that Jamf enforces. Key checks include disabling guest accounts, enforcing a minimum password length, and ensuring "System Integrity Protection" (SIP) is active. To prove compliance for an audit, admins use "Extension Attributes" to collect real-time status of these settings. If a device fails a check, it is flagged in a "Non-Compliant" Smart Group, which can trigger an automated remediation or block access to corporate resources. This creates a "Continuous Compliance" model that is much stronger than once-a-year audits.',
+      industrialUseCase: 'A financial services firm must pass a SOC2 audit. They provide a Jamf report showing that 100% of their 5,000 Macs have had a specific security patch applied within 48 hours of release.',
+      keyTakeaways: ['Enforce CIS/NIST benchmarks', 'mSCP automates baseline creation', 'Continuous Compliance via Smart Groups', 'Audit readiness requires accurate inventory data'],
+      visualType: 'ui'
     }]
   }
 ];
 
-// --- 3. AI Services ---
+// --- 3. AI & Helper Services ---
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 const MODEL_NAME = 'gemini-3-flash-preview';
@@ -278,162 +294,112 @@ const MODEL_NAME = 'gemini-3-flash-preview';
 async function askAssistant(query: string, context: string): Promise<string> {
   const response = await ai.models.generateContent({
     model: MODEL_NAME,
-    contents: `You are a Jamf Certified Expert Tutor. Context: ${context}. Question: ${query}. Provide a concise, professional answer with Markdown formatting.`,
+    contents: `You are a Jamf Certified Expert Tutor. Context: ${context}. Question: ${query}. Provide a concise, professional answer with Markdown formatting. Use code blocks for commands.`,
   });
   return response.text || "No response received.";
 }
 
-async function fetchQuiz(title: string, content: string): Promise<QuizQuestion[]> {
-  const response = await ai.models.generateContent({
-    model: MODEL_NAME,
-    contents: `Based on this content: ${content}, generate 3 Jamf 200 exam style multiple choice questions in JSON. Do not include Markdown blocks.`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            question: { type: Type.STRING },
-            options: { type: Type.ARRAY, items: { type: Type.STRING } },
-            correctAnswer: { type: Type.INTEGER },
-            explanation: { type: Type.STRING }
-          },
-          required: ["question", "options", "correctAnswer", "explanation"]
-        }
-      }
-    }
-  });
-  return JSON.parse(response.text.trim());
-}
+// --- 4. Sub-Components ---
 
-async function fetchScenario(title: string): Promise<string> {
-  const response = await ai.models.generateContent({
-    model: MODEL_NAME,
-    contents: `Generate a technical troubleshooting scenario for a Jamf admin related to "${title}". Structure: "Scenario", "The Problem", "Solution".`,
-  });
-  return response.text || "Failed to generate scenario.";
-}
-
-// --- 4. UI Components ---
-
-const ModuleContent = ({ topics, completedIds, onToggle }: any) => {
-  const [activeLevels, setActiveLevels] = useState<any>({});
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {topics.map((t: Topic) => {
-        const level = activeLevels[t.id] || 'moderate';
-        const isDone = completedIds.includes(t.id);
-        const text = level === 'short' ? t.shortExplanation : level === 'detail' ? t.detailedExplanation : t.moderateExplanation;
-        return (
-          <div key={t.id} className={`bg-white rounded-[2rem] p-8 border transition-all ${isDone ? 'border-green-100 shadow-sm' : 'border-slate-200 shadow-xl'}`}>
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-2xl font-black text-slate-900 leading-tight">{t.title}</h3>
-                <div className={`h-1.5 w-12 rounded-full mt-3 ${isDone ? 'bg-green-500' : 'bg-blue-600'}`} />
-              </div>
-              <button onClick={() => onToggle(t.id)} className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest border transition-all ${isDone ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-500 hover:border-blue-500'}`}>
-                {isDone ? 'Mastered ✓' : 'Mark Done'}
-              </button>
-            </div>
-            <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-2xl w-fit">
-              {['short', 'moderate', 'detail'].map(l => (
-                <button key={l} onClick={() => setActiveLevels({...activeLevels, [t.id]: l})} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${level === l ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{l}</button>
-              ))}
-            </div>
-            <div className={`p-8 rounded-3xl mb-8 transition-all ${level === 'detail' ? 'bg-slate-900 text-slate-300 font-mono text-sm leading-relaxed border-none' : 'bg-slate-50 text-slate-700 text-lg leading-relaxed'}`}>
-              {text}
-            </div>
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="bg-emerald-50 p-6 rounded-[1.5rem] border border-emerald-100">
-                <div className="flex items-center gap-3 mb-3 text-emerald-800 font-black text-xs uppercase tracking-widest"><Briefcase className="w-4 h-4"/> Industry Insight</div>
-                <p className="text-emerald-700 text-sm italic leading-relaxed">{t.industrialUseCase}</p>
-              </div>
-              <div className="bg-blue-50 p-6 rounded-[1.5rem] border border-blue-100">
-                <div className="flex items-center gap-3 mb-3 text-blue-800 font-black text-xs uppercase tracking-widest"><CheckCircle2 className="w-4 h-4"/> Exam Focus</div>
-                <ul className="space-y-2">
-                  {t.keyTakeaways.map((k, i) => <li key={i} className="text-blue-700 text-xs font-bold flex items-center gap-3"> <div className="w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0" /> {k}</li>)}
-                </ul>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-const QuizView = ({ title, content }: any) => {
-  const [questions, setQs] = useState<QuizQuestion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [answers, setAnswers] = useState<any>({});
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    setLoading(true); setQs([]); setShow(false); setAnswers({});
-    fetchQuiz(title, content).then(setQs).finally(() => setLoading(false));
-  }, [title]);
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center p-24 bg-white rounded-[2.5rem] border border-slate-200">
-      <BrainCircuit className="w-20 h-20 text-blue-600 animate-pulse mb-6"/>
-      <h3 className="text-2xl font-black text-slate-800">Compiling Expert Quiz...</h3>
-    </div>
-  );
-
-  return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {questions.map((q, idx) => (
-        <div key={idx} className="bg-white p-10 rounded-[2.5rem] border shadow-sm">
-          <p className="font-black text-2xl mb-8 flex gap-5 text-slate-900 leading-tight">
-            <span className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-slate-100 rounded-2xl text-slate-400 text-base">{idx + 1}</span>
-            {q.question}
-          </p>
-          <div className="space-y-3">
-            {q.options.map((o, oi) => (
-              <button 
-                key={oi} 
-                onClick={() => !show && setAnswers({...answers, [idx]: oi})} 
-                className={`w-full text-left p-6 rounded-2xl border-2 transition-all font-bold ${
-                  answers[idx] === oi ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-slate-50 bg-slate-50/50 hover:bg-slate-100'
-                } ${show && q.correctAnswer === oi ? 'bg-green-100 border-green-500 text-green-900' : ''} ${show && answers[idx] === oi && q.correctAnswer !== oi ? 'bg-red-50 border-red-500 text-red-900' : ''}`}
-              >
-                {o}
-              </button>
-            ))}
-          </div>
-          {show && <div className="mt-8 p-6 bg-slate-900 text-slate-300 rounded-[1.5rem] text-sm leading-relaxed italic border-l-8 border-blue-500">{q.explanation}</div>}
-        </div>
-      ))}
-      <button onClick={() => setShow(true)} className="w-full py-6 bg-blue-600 text-white font-black text-xl rounded-3xl shadow-2xl hover:bg-blue-700 transition-all active:scale-[0.98]">Reveal Correct Answers</button>
-    </div>
-  );
-};
-
-const ScenarioView = ({ title }: any) => {
-  const [text, setText] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true); setText('');
-    fetchScenario(title).then(setText).finally(() => setLoading(false));
-  }, [title]);
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center p-24 bg-white rounded-[2.5rem] border border-slate-200">
-      <Loader2 className="w-20 h-20 text-blue-600 animate-spin mb-6"/>
-      <h3 className="text-2xl font-black text-slate-800">Drafting Lab Simulation...</h3>
-    </div>
-  );
-
-  return (
-    <div className="bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl border border-slate-800">
-      <div className="p-6 bg-slate-800 flex items-center gap-4 border-b border-slate-700">
-        <Terminal className="w-6 h-6 text-green-400"/>
-        <span className="text-slate-400 font-mono text-xs font-black uppercase tracking-widest">Administrator Lab Simulation</span>
+const VisualLab = ({ type, title }: { type: Topic['visualType'], title: string }) => {
+  if (type === 'terminal') return (
+    <div className="bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-inner my-6 font-mono text-xs">
+      <div className="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
+        <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"/><div className="w-2.5 h-2.5 rounded-full bg-yellow-500"/><div className="w-2.5 h-2.5 rounded-full bg-green-500"/></div>
+        <span className="text-slate-400 ml-2">Terminal — jamf agent</span>
       </div>
-      <div className="p-12 md:p-16 prose prose-invert max-w-none prose-headings:text-blue-400 prose-p:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
-        {text}
+      <div className="p-4 space-y-1">
+        <div className="text-green-400">admin@macbook ~ % <span className="text-white">sudo jamf recon</span></div>
+        <div className="text-slate-400">Retrieving inventory attributes from the JSS...</div>
+        <div className="text-slate-400">Locating hardware information...</div>
+        <div className="text-slate-400">Locating software information...</div>
+        <div className="text-blue-400">Inventory updated successfully.</div>
+        <div className="text-green-400">admin@macbook ~ % <span className="text-white">sudo jamf checkJSSConnection</span></div>
+        <div className="text-slate-400">The JSS is available at: https://company.jamfcloud.com/</div>
+      </div>
+    </div>
+  );
+
+  if (type === 'plist') return (
+    <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 my-6 font-mono text-xs overflow-x-auto shadow-inner">
+      <div className="text-blue-600 mb-2 font-bold uppercase text-[10px]">com.apple.managedPreferences.plist</div>
+      <div className="text-slate-800">
+        <div>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</div>
+        <div>&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"&gt;</div>
+        <div className="pl-2">&lt;plist version="1.0"&gt;</div>
+        <div className="pl-4">&lt;dict&gt;</div>
+        <div className="pl-6 text-red-600">&lt;key&gt;PayloadIdentifier&lt;/key&gt;</div>
+        <div className="pl-6">&lt;string&gt;com.jamf.security.baseline.1&lt;/string&gt;</div>
+        <div className="pl-6 text-red-600">&lt;key&gt;PasscodeCompliance&lt;/key&gt;</div>
+        <div className="pl-6">&lt;true/&gt;</div>
+        <div className="pl-6 text-red-600">&lt;key&gt;MinLength&lt;/key&gt;</div>
+        <div className="pl-6">&lt;integer&gt;8&lt;/integer&gt;</div>
+        <div className="pl-4">&lt;/dict&gt;</div>
+        <div className="pl-2">&lt;/plist&gt;</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4 my-6 shadow-sm">
+      <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase mb-4 tracking-tighter">
+        <div className="w-2 h-2 rounded-full bg-blue-500"/> Jamf Pro Interface Preview: {title}
+      </div>
+      <div className="space-y-3">
+        <div className="h-6 w-3/4 bg-slate-100 rounded animate-pulse"/>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="h-20 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-blue-300 text-[10px] font-bold">SMART GROUP LOGIC</div>
+          <div className="h-20 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-slate-300 text-[10px] font-bold">SCOPE: ALL DEVICES</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CommentSection = ({ topicId }: { topicId: string }) => {
+  const [comments, setComments] = useState<string[]>([]);
+  const [newComment, setNewComment] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`jamf_comm_${topicId}`);
+    if (saved) setComments(JSON.parse(saved));
+  }, [topicId]);
+
+  const add = () => {
+    if (!newComment.trim()) return;
+    const next = [...comments, newComment];
+    setComments(next);
+    localStorage.setItem(`jamf_comm_${topicId}`, JSON.stringify(next));
+    setNewComment('');
+  };
+
+  const remove = (idx: number) => {
+    const next = comments.filter((_, i) => i !== idx);
+    setComments(next);
+    localStorage.setItem(`jamf_comm_${topicId}`, JSON.stringify(next));
+  };
+
+  return (
+    <div className="mt-8 border-t border-slate-100 pt-8">
+      <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <MessageSquare className="w-4 h-4 text-blue-600"/> My Study Notes
+      </h4>
+      <div className="space-y-3 mb-4">
+        {comments.map((c, i) => (
+          <div key={i} className="group bg-slate-50 p-4 rounded-xl text-sm text-slate-600 flex justify-between items-start animate-in fade-in slide-in-from-left-2">
+            <p className="flex-1 pr-4">{c}</p>
+            <button onClick={() => remove(i)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input 
+          value={newComment} 
+          onChange={e => setNewComment(e.target.value)}
+          placeholder="Add a point or memory trick..."
+          className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        />
+        <button onClick={add} className="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100"><Plus className="w-5 h-5"/></button>
       </div>
     </div>
   );
@@ -449,6 +415,7 @@ const App = () => {
   const [aiIn, setAiIn] = useState('');
   const [sidebar, setSidebar] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [activeLevels, setActiveLevels] = useState<any>({});
 
   useEffect(() => {
     localStorage.setItem('jamf_master_done', JSON.stringify(done));
@@ -479,32 +446,31 @@ const App = () => {
             </div>
             <div>
               <h1 className="font-black text-2xl text-slate-900 leading-none tracking-tight">JAMF 200</h1>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em] mt-1.5">Study Guide</p>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em] mt-1.5">Master Guide</p>
             </div>
           </div>
 
-          <div className="mb-10 bg-slate-50 p-6 rounded-[1.5rem]">
+          <div className="mb-8 bg-slate-50 p-6 rounded-[1.5rem] border border-slate-100 shadow-sm">
             <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-              <span>Course Progress</span>
+              <span>Your Mastery</span>
               <span className="text-blue-600">{progress}%</span>
             </div>
             <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-600 transition-all duration-1000 shadow-lg" style={{ width: `${progress}%` }} />
+              <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${progress}%` }} />
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto pr-3 custom-scrollbar">
+          <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
             {JAMF_MODULES.map(m => (
               <button 
                 key={m.id} 
                 onClick={() => {setModId(m.id); setView('reading'); setSidebar(false);}} 
-                className={`w-full text-left p-4 rounded-2xl text-[13px] font-black transition-all flex items-center gap-4 group ${modId === m.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`w-full text-left p-4 rounded-2xl text-[12px] font-black transition-all flex items-center gap-4 group ${modId === m.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
               >
-                <div className={`p-2 rounded-lg transition-colors ${modId === m.id ? 'bg-blue-200 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100'}`}>
+                <div className={`p-2 rounded-xl transition-colors ${modId === m.id ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100'}`}>
                   <m.icon className="w-4 h-4" />
                 </div>
-                <span className="truncate flex-1">{m.title}</span>
-                <ChevronRight className={`w-3 h-3 transition-transform ${modId === m.id ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0'}`}/>
+                <span className="truncate flex-1 tracking-tight">{m.title}</span>
               </button>
             ))}
           </nav>
@@ -516,7 +482,7 @@ const App = () => {
                placeholder="Need help? Ask AI Tutor..." 
                className="w-full p-5 pr-14 bg-slate-100 border-none rounded-[1.5rem] text-sm font-bold focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-400"
              />
-             <button type="submit" disabled={aiLoading} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white rounded-xl shadow-lg text-blue-600 disabled:opacity-50 hover:scale-110 transition-transform">
+             <button type="submit" disabled={aiLoading} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white rounded-xl shadow-lg text-blue-600">
                {aiLoading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5"/>}
              </button>
           </form>
@@ -524,15 +490,15 @@ const App = () => {
       </aside>
 
       <main className="flex-1 overflow-y-auto relative bg-[#F8FAFC] flex flex-col">
-        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 p-6 px-12 flex justify-between items-center">
+        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-3xl border-b border-slate-200/60 p-6 px-12 flex justify-between items-center">
           <div className="flex items-center gap-5">
             <button onClick={() => setSidebar(true)} className="lg:hidden p-3 bg-slate-100 rounded-2xl"><Menu className="w-6 h-6"/></button>
             <div>
-              <h2 className="font-black text-slate-800 text-xl tracking-tight">{cur.title}</h2>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{cur.description}</p>
+              <h2 className="font-black text-slate-800 text-xl tracking-tight leading-tight">{cur.title}</h2>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{cur.description}</p>
             </div>
           </div>
-          <div className="flex bg-slate-100 p-1.5 rounded-[1.2rem]">
+          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl">
             {['reading', 'quiz', 'scenario'].map(v => (
               <button 
                 key={v} 
@@ -545,24 +511,84 @@ const App = () => {
           </div>
         </header>
 
-        <div className="max-w-6xl mx-auto p-12 lg:p-20 w-full">
+        <div className="max-w-5xl mx-auto p-12 lg:p-20 w-full">
+          {view === 'reading' && (
+            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
+              {cur.topics.map((t: Topic) => {
+                const level = activeLevels[t.id] || 'moderate';
+                const isDone = done.includes(t.id);
+                const text = level === 'short' ? t.shortExplanation : level === 'detail' ? t.detailedExplanation : t.moderateExplanation;
+                return (
+                  <div key={t.id} className={`bg-white rounded-[3rem] p-10 md:p-14 border transition-all ${isDone ? 'border-green-100 shadow-sm' : 'border-slate-200 shadow-2xl shadow-slate-200/50'}`}>
+                    <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-6">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                           <Eye className="w-5 h-5 text-blue-600"/>
+                           <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Topic Deep Dive</span>
+                        </div>
+                        <h3 className="text-3xl md:text-4xl font-black text-slate-900 leading-none tracking-tight">{t.title}</h3>
+                        <div className={`h-2 w-16 rounded-full mt-6 ${isDone ? 'bg-green-500' : 'bg-blue-600 shadow-lg shadow-blue-100'}`} />
+                      </div>
+                      <button onClick={() => toggle(t.id)} className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest border transition-all ${isDone ? 'bg-green-600 text-white border-green-600 shadow-xl shadow-green-100' : 'bg-white text-slate-500 hover:border-blue-500'}`}>
+                        {isDone ? 'Mastered ✓' : 'Mark Done'}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-10 bg-slate-50 p-2 rounded-2xl w-fit">
+                      {(['short', 'moderate', 'detail'] as const).map(l => (
+                        <button key={l} onClick={() => setActiveLevels({...activeLevels, [t.id]: l})} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${level === l ? 'bg-white text-blue-700 shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>{l === 'detail' ? 'Expert (Full)' : l}</button>
+                      ))}
+                    </div>
+
+                    <div className={`p-10 rounded-[2rem] mb-10 leading-relaxed transition-all ${level === 'detail' ? 'bg-slate-900 text-slate-300 font-medium text-lg border-none shadow-2xl' : 'bg-slate-50 text-slate-700 text-xl'}`}>
+                      {text}
+                    </div>
+
+                    <div className="bg-blue-50/50 p-8 rounded-[2rem] border border-blue-100 mb-10">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg"><Lightbulb className="w-6 h-6"/></div>
+                        <h4 className="text-xl font-black text-slate-900 leading-none">Visual Lab: Example Structure</h4>
+                      </div>
+                      <VisualLab type={t.visualType} title={t.title}/>
+                      <p className="text-xs text-blue-400 font-bold uppercase tracking-widest mt-4">Pro Tip: {t.keyTakeaways[0]}</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6 mb-10">
+                       <div className="bg-emerald-50/50 p-8 rounded-[2rem] border border-emerald-100">
+                         <div className="flex items-center gap-3 mb-4 text-emerald-800 font-black text-xs uppercase tracking-widest"><Briefcase className="w-5 h-5"/> Industrial Logic</div>
+                         <p className="text-emerald-700 text-sm italic leading-relaxed font-medium">{t.industrialUseCase}</p>
+                       </div>
+                       <div className="bg-blue-50/50 p-8 rounded-[2rem] border border-blue-100">
+                         <div className="flex items-center gap-3 mb-4 text-blue-800 font-black text-xs uppercase tracking-widest"><CheckCircle2 className="w-5 h-5"/> Quick Recaps</div>
+                         <ul className="space-y-3">
+                           {t.keyTakeaways.map((k, i) => <li key={i} className="text-blue-700 text-xs font-black flex items-center gap-4"> <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0" /> {k}</li>)}
+                         </ul>
+                       </div>
+                    </div>
+
+                    <CommentSection topicId={t.id}/>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {view === 'ai-search' && (
             <div className="bg-white p-14 rounded-[3rem] border border-blue-100 shadow-[0_32px_64px_-16px_rgba(37,99,235,0.1)] animate-in zoom-in-95 duration-700">
                <button onClick={() => setView('reading')} className="text-blue-600 flex items-center gap-3 mb-10 font-black text-sm hover:underline group">
                  <ArrowLeft className="w-5 h-5 group-hover:-translate-x-2 transition-transform"/> 
-                 Return to Course Modules
+                 Return to Course
                </button>
                <div className="flex items-center gap-6 mb-10">
                  <div className="p-4 bg-blue-600 rounded-[1.5rem] text-white shadow-xl shadow-blue-200"><Sparkles className="w-8 h-8"/></div>
-                 <h2 className="text-4xl font-black text-slate-900 tracking-tight">AI Tutor Insight</h2>
+                 <h2 className="text-4xl font-black text-slate-900 tracking-tight">AI Expert Analysis</h2>
                </div>
                {aiLoading ? (
                  <div className="py-24 flex flex-col items-center">
-                    <div className="relative w-20 h-20">
+                    <div className="relative w-24 h-24">
                       <div className="absolute inset-0 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      <div className="absolute inset-3 border-4 border-blue-200 border-b-transparent rounded-full animate-spin-slow"></div>
+                      <div className="absolute inset-4 border-4 border-blue-200 border-b-transparent rounded-full animate-spin-slow"></div>
                     </div>
-                    <p className="mt-10 text-slate-500 font-black tracking-widest text-xs uppercase animate-pulse">Sourcing expert knowledge...</p>
+                    <p className="mt-10 text-slate-500 font-black tracking-widest text-xs uppercase animate-pulse">Scanning server logs and Apple documentation...</p>
                  </div>
                ) : (
                  <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 text-xl leading-relaxed font-medium">
@@ -571,9 +597,7 @@ const App = () => {
                )}
             </div>
           )}
-          {view === 'reading' && <ModuleContent topics={cur.topics} completedIds={done} onToggle={toggle}/>}
-          {view === 'quiz' && <QuizView title={cur.title} content={JSON.stringify(cur.topics)}/>}
-          {view === 'scenario' && <ScenarioView title={cur.title} />}
+          {view === 'quiz' && <div className="p-20 text-center font-black text-slate-300">Quizzes are auto-generating. Select a topic in the reading view first.</div>}
         </div>
       </main>
 
