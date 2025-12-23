@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   BookOpen, GraduationCap, ChevronRight, Menu, X, Search, CheckCircle, 
@@ -7,9 +7,10 @@ import {
   Briefcase, Check, ArrowLeft, Loader2, RefreshCw, Trophy, 
   BrainCircuit, Terminal, Lightbulb, ChevronDown, ChevronUp, ShieldCheck, 
   Cpu, Settings, Package, UserCheck, Key, ShoppingCart, Code2, Eraser, 
-  Lock, Network, Settings2, Workflow, Box, Globe, MessageSquare, Plus, Trash2, Eye
+  Lock, Network, Settings2, Workflow, Box, Globe, MessageSquare, Plus, Trash2, Eye,
+  MessageCircle, User, Bot, History
 } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai";
 
 // --- 1. Types & Interfaces ---
 
@@ -31,6 +32,12 @@ interface Module {
   topics: Topic[];
 }
 
+interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+  timestamp: number;
+}
+
 interface QuizQuestion {
   question: string;
   options: string[];
@@ -38,9 +45,9 @@ interface QuizQuestion {
   explanation: string;
 }
 
-type ViewState = 'reading' | 'quiz' | 'scenario' | 'ai-search';
+type ViewState = 'reading' | 'quiz' | 'scenario' | 'ai-chat';
 
-// --- 2. Expanded Data (Jamf 200 Full 15-Module Curriculum) ---
+// --- 2. Data (Jamf 200 Full 15-Module Curriculum) ---
 
 const JAMF_MODULES: Module[] = [
   {
@@ -272,18 +279,119 @@ const JAMF_MODULES: Module[] = [
 
 // --- 3. AI & Helper Services ---
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+const aiClient = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 const MODEL_NAME = 'gemini-3-flash-preview';
 
-async function askAssistant(query: string, context: string): Promise<string> {
-  const response = await ai.models.generateContent({
-    model: MODEL_NAME,
-    contents: `You are a Jamf Certified Expert Tutor. Context: ${context}. Question: ${query}. Provide a concise, professional answer with Markdown formatting. Use code blocks for commands.`,
-  });
-  return response.text || "No response received.";
-}
-
 // --- 4. Sub-Components ---
+
+const ChatDiscussion = ({ topic, onClose }: { topic: Topic, onClose: () => void }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const chatRef = useRef<Chat | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Initial setup for the chat session
+    const setupChat = async () => {
+      chatRef.current = aiClient.chats.create({
+        model: MODEL_NAME,
+        config: {
+          systemInstruction: `You are a Jamf Certified Expert Tutor. Your goal is to help students understand the Jamf 200 curriculum. 
+          The student is currently studying: "${topic.title}".
+          Context: ${topic.detailedExplanation}. 
+          Provide technical, professional, yet accessible explanations. Use markdown for code blocks and lists. Keep answers conversational but precise.`,
+        },
+      });
+      
+      // Welcome message
+      setMessages([{
+        role: 'model',
+        text: `Hi there! I'm your Jamf Expert Tutor. Let's discuss **${topic.title}**. What part of this topic can I clarify for you?`,
+        timestamp: Date.now()
+      }]);
+    };
+
+    setupChat();
+  }, [topic]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
+  }, [messages, loading]);
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || loading || !chatRef.current) return;
+
+    const userMsg = input.trim();
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', text: userMsg, timestamp: Date.now() }]);
+    setLoading(true);
+
+    try {
+      const result = await chatRef.current.sendMessage({ message: userMsg });
+      setMessages(prev => [...prev, { role: 'model', text: result.text || "I'm sorry, I couldn't generate a response.", timestamp: Date.now() }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'model', text: "Error: Failed to communicate with AI. Please try again.", timestamp: Date.now() }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-[600px] bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="bg-blue-600 p-6 text-white flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="p-2 bg-white/20 rounded-xl"><MessageCircle className="w-5 h-5"/></div>
+          <div>
+            <h4 className="font-black text-sm uppercase tracking-widest">Expert Discussion</h4>
+            <p className="text-[10px] text-blue-100 font-bold opacity-80">{topic.title}</p>
+          </div>
+        </div>
+        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5"/></button>
+      </div>
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50 custom-scrollbar">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
+            <div className={`max-w-[85%] p-4 rounded-2xl flex gap-3 ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm'}`}>
+              <div className="shrink-0 pt-1">
+                {msg.role === 'user' ? <User className="w-4 h-4"/> : <Bot className="w-4 h-4 text-blue-600"/>}
+              </div>
+              <div className="prose prose-sm prose-slate max-w-none text-inherit leading-relaxed">
+                {msg.text.split('\n').map((line, li) => <p key={li}>{line}</p>)}
+              </div>
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start animate-pulse">
+            <div className="bg-white border border-slate-200 p-4 rounded-2xl flex gap-3 rounded-tl-none">
+              <Bot className="w-4 h-4 text-blue-600 shrink-0 mt-1"/>
+              <div className="flex gap-1 items-center h-4">
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"/>
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]"/>
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"/>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={send} className="p-4 bg-white border-t border-slate-100 flex gap-2">
+        <input 
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Ask about architecture, ports, paths..."
+          className="flex-1 bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-blue-100 transition-all font-medium"
+        />
+        <button type="submit" disabled={loading || !input.trim()} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-100">
+          <Send className="w-5 h-5"/>
+        </button>
+      </form>
+    </div>
+  );
+};
 
 const CommentSection = ({ topicId }: { topicId: string }) => {
   const [comments, setComments] = useState<string[]>([]);
@@ -340,11 +448,9 @@ const App = () => {
   const [modId, setModId] = useState(JAMF_MODULES[0].id);
   const [view, setView] = useState<ViewState>('reading');
   const [done, setDone] = useState<string[]>(() => JSON.parse(localStorage.getItem('jamf_master_done') || '[]'));
-  const [aiText, setAiText] = useState('');
-  const [aiIn, setAiIn] = useState('');
   const [sidebar, setSidebar] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
   const [activeLevels, setActiveLevels] = useState<any>({});
+  const [discussTopic, setDiscussTopic] = useState<Topic | null>(null);
 
   useEffect(() => {
     localStorage.setItem('jamf_master_done', JSON.stringify(done));
@@ -352,16 +458,6 @@ const App = () => {
 
   const cur = JAMF_MODULES.find(m => m.id === modId)!;
   const toggle = (id: string) => setDone(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-
-  const ask = async (e: any) => {
-    e.preventDefault(); if (!aiIn || aiLoading) return;
-    setView('ai-search'); setAiLoading(true); setAiText('Analyzing curriculum and crafting your expert answer...');
-    try {
-      const res = await askAssistant(aiIn, cur.title);
-      setAiText(res);
-    } catch (e) { setAiText('Error: Failed to connect to AI assistant.'); }
-    finally { setAiLoading(false); setAiIn(''); }
-  };
 
   const progress = Math.round((done.length / JAMF_MODULES.reduce((a,m) => a + m.topics.length, 0)) * 100);
 
@@ -393,7 +489,7 @@ const App = () => {
             {JAMF_MODULES.map(m => (
               <button 
                 key={m.id} 
-                onClick={() => {setModId(m.id); setView('reading'); setSidebar(false);}} 
+                onClick={() => {setModId(m.id); setView('reading'); setSidebar(false); setDiscussTopic(null);}} 
                 className={`w-full text-left p-4 rounded-2xl text-[12px] font-black transition-all flex items-center gap-4 group ${modId === m.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
               >
                 <div className={`p-2 rounded-xl transition-colors ${modId === m.id ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100'}`}>
@@ -404,17 +500,13 @@ const App = () => {
             ))}
           </nav>
 
-          <form onSubmit={ask} className="mt-8 relative">
-             <input 
-               value={aiIn} 
-               onChange={e => setAiIn(e.target.value)} 
-               placeholder="Need help? Ask AI Tutor..." 
-               className="w-full p-5 pr-14 bg-slate-100 border-none rounded-[1.5rem] text-sm font-bold focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-400"
-             />
-             <button type="submit" disabled={aiLoading} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white rounded-xl shadow-lg text-blue-600">
-               {aiLoading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5"/>}
-             </button>
-          </form>
+          <div className="mt-auto p-6 bg-blue-50 rounded-[2rem] border border-blue-100">
+            <div className="flex items-center gap-3 mb-3">
+              <Sparkles className="w-4 h-4 text-blue-600"/>
+              <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest">AI Study Help</span>
+            </div>
+            <p className="text-[11px] text-blue-700 leading-relaxed font-medium">Click "Discuss with AI" inside any topic to start a conversation about specific technical concepts.</p>
+          </div>
         </div>
       </aside>
 
@@ -431,7 +523,7 @@ const App = () => {
             {['reading', 'quiz', 'scenario'].map(v => (
               <button 
                 key={v} 
-                onClick={() => setView(v as ViewState)} 
+                onClick={() => { setView(v as ViewState); setDiscussTopic(null); }} 
                 className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === v ? 'bg-white text-blue-700 shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 {v}
@@ -440,7 +532,17 @@ const App = () => {
           </div>
         </header>
 
-        <div className="max-w-5xl mx-auto p-12 lg:p-20 w-full">
+        <div className="max-w-5xl mx-auto p-12 lg:p-20 w-full relative">
+          
+          {/* AI Chat Overlay */}
+          {discussTopic && (
+            <div className="fixed inset-x-0 bottom-0 lg:left-80 z-50 p-6 pointer-events-none">
+              <div className="max-w-2xl mx-auto pointer-events-auto">
+                <ChatDiscussion topic={discussTopic} onClose={() => setDiscussTopic(null)}/>
+              </div>
+            </div>
+          )}
+
           {view === 'reading' && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
               {cur.topics.map((t: Topic) => {
@@ -458,9 +560,17 @@ const App = () => {
                         <h3 className="text-3xl md:text-4xl font-black text-slate-900 leading-none tracking-tight">{t.title}</h3>
                         <div className={`h-2 w-16 rounded-full mt-6 ${isDone ? 'bg-green-500' : 'bg-blue-600 shadow-lg shadow-blue-100'}`} />
                       </div>
-                      <button onClick={() => toggle(t.id)} className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest border transition-all ${isDone ? 'bg-green-600 text-white border-green-600 shadow-xl shadow-green-100' : 'bg-white text-slate-500 hover:border-blue-500'}`}>
-                        {isDone ? 'Mastered ✓' : 'Mark Done'}
-                      </button>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => setDiscussTopic(t)} 
+                          className="px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-2"
+                        >
+                          <Sparkles className="w-4 h-4"/> Discuss with AI
+                        </button>
+                        <button onClick={() => toggle(t.id)} className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest border transition-all ${isDone ? 'bg-green-600 text-white border-green-600 shadow-xl shadow-green-100' : 'bg-white text-slate-500 hover:border-blue-500'}`}>
+                          {isDone ? 'Mastered ✓' : 'Mark Done'}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-10 bg-slate-50 p-2 rounded-2xl w-fit">
@@ -492,32 +602,9 @@ const App = () => {
               })}
             </div>
           )}
-          {view === 'ai-search' && (
-            <div className="bg-white p-14 rounded-[3rem] border border-blue-100 shadow-[0_32px_64px_-16px_rgba(37,99,235,0.1)] animate-in zoom-in-95 duration-700">
-               <button onClick={() => setView('reading')} className="text-blue-600 flex items-center gap-3 mb-10 font-black text-sm hover:underline group">
-                 <ArrowLeft className="w-5 h-5 group-hover:-translate-x-2 transition-transform"/> 
-                 Return to Course
-               </button>
-               <div className="flex items-center gap-6 mb-10">
-                 <div className="p-4 bg-blue-600 rounded-[1.5rem] text-white shadow-xl shadow-blue-200"><Sparkles className="w-8 h-8"/></div>
-                 <h2 className="text-4xl font-black text-slate-900 tracking-tight">AI Expert Analysis</h2>
-               </div>
-               {aiLoading ? (
-                 <div className="py-24 flex flex-col items-center">
-                    <div className="relative w-24 h-24">
-                      <div className="absolute inset-0 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      <div className="absolute inset-4 border-4 border-blue-200 border-b-transparent rounded-full animate-spin-slow"></div>
-                    </div>
-                    <p className="mt-10 text-slate-500 font-black tracking-widest text-xs uppercase animate-pulse">Scanning server logs and Apple documentation...</p>
-                 </div>
-               ) : (
-                 <div className="prose prose-slate max-w-none whitespace-pre-wrap text-slate-700 text-xl leading-relaxed font-medium">
-                   {aiText}
-                 </div>
-               )}
-            </div>
-          )}
-          {view === 'quiz' && <div className="p-20 text-center font-black text-slate-300">Quizzes are auto-generating. Select a topic in the reading view first.</div>}
+          
+          {view === 'quiz' && <div className="p-20 text-center font-black text-slate-300">Practice quizzes for {cur.title} are under development. Use "Discuss with AI" to test your knowledge!</div>}
+          {view === 'scenario' && <div className="p-20 text-center font-black text-slate-300">Lab scenarios for {cur.title} are being generated. Ask AI to describe a scenario!</div>}
         </div>
       </main>
 
