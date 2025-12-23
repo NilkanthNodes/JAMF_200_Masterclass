@@ -3,5 +3,19 @@
   "cleanUrls": true,
   "framework": null,
   "installCommand": "echo 'No install needed'",
-  "buildCommand": "echo 'No build needed'"
+  "buildCommand": "echo 'No build needed'",
+  "headers": [
+    {
+      "source": "/(.*).(tsx|ts)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
