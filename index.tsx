@@ -21,7 +21,6 @@ interface Topic {
   detailedExplanation: string;
   industrialUseCase: string;
   keyTakeaways: string[];
-  visualType: 'terminal' | 'plist' | 'diagram' | 'ui';
 }
 
 interface Module {
@@ -56,8 +55,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'The Jamf Pro server (JSS) is built on a high-performance Java stack. It uses Apache Tomcat as the primary servlet container to serve the web application and MySQL or MariaDB for the relational database. It is the brain of your Apple ecosystem management.',
       detailedExplanation: 'Jamf Pro functions as a Java Web Archive (WAR) file deployed within an Apache Tomcat environment. The Tomcat server manages HTTPS traffic (typically on port 443) for both administrative access and device check-ins. The MySQL database schema contains every object in the environment—from computer inventory records to policy definitions and FileVault recovery keys. On macOS, the Jamf agent binary communicates with the server via the REST API and a specific tasking protocol. On iOS, communication happens strictly via the Apple MDM protocol. Critical server file paths include /Library/JSS/ (on macOS servers) or /var/lib/jamf/ (on Linux servers) where log files and database configuration (DataBase.xml) are stored. For cloud-hosted environments, Jamf manages the underlying AWS infrastructure, providing automatic scaling and redundant data centers.',
       industrialUseCase: 'Large enterprises use Jamf Cloud for its global availability, ensuring that a remote worker in Tokyo and an admin in London can both reach the server simultaneously without local network latency.',
-      keyTakeaways: ['Java/Tomcat/MySQL Stack', 'Port 443 is required for MDM', 'WAR file acts as the application layer', 'Database stores all persistent settings'],
-      visualType: 'terminal'
+      keyTakeaways: ['Java/Tomcat/MySQL Stack', 'Port 443 is required for MDM', 'WAR file acts as the application layer', 'Database stores all persistent settings']
     }]
   },
   {
@@ -72,8 +70,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Packages (.pkg) are standard Apple flat installers that support complex logic through scripts. Disk Images (.dmg) are virtual volumes used for direct block-copy file deployments.',
       detailedExplanation: 'A .pkg file is a structured container used by the Apple Installer service (/usr/sbin/installer). It can include "Preinstall" and "Postinstall" scripts that run before and after the binary payload is dropped. This is essential for apps that need to register a license or stop a service before updating. A .dmg is a compressed image of a filesystem. When Jamf deploys a DMG, it mounts the image to a temporary path, copies the files to the designated destination, and then unmounts it. Jamf Composer is the gold standard tool for creating both: it can "Snapshot" a system by scanning the filesystem before and after an app installation to capture exactly what changed. For enterprise deployment, PKGs are generally preferred because they respect the native macOS installation framework and logging systems.',
       industrialUseCase: 'Use a PKG for a security agent like CrowdStrike to ensure the registration script runs post-install; use a DMG for a set of corporate fonts that simply need to be copied into /Library/Fonts.',
-      keyTakeaways: ['PKG supports pre/post-install logic', 'DMG is for simple file-to-file copy', 'Composer is used for Snapshotting', 'Installer service handles PKG execution'],
-      visualType: 'ui'
+      keyTakeaways: ['PKG supports pre/post-install logic', 'DMG is for simple file-to-file copy', 'Composer is used for Snapshotting', 'Installer service handles PKG execution']
     }]
   },
   {
@@ -88,8 +85,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Automated Device Enrollment (ADE) is the cornerstone of modern Apple management. It links your hardware purchases directly to your Jamf server via Apple Business Manager.',
       detailedExplanation: 'The ADE workflow begins when an organization buys a device from Apple or an authorized reseller. The device serial number is automatically synced to the organization\'s Apple Business Manager (ABM) portal. Inside ABM, the admin assigns those serial numbers to their Jamf Pro MDM server. When a user powers on a shrink-wrapped Mac, it connects to Wi-Fi and queries Apple’s servers for its "Management Status." Apple redirects the device to the Jamf "Prestage Enrollment" URL. The Mac then downloads the Management Profile, which can make management mandatory and unremovable. During this "Setup Assistant" phase, the admin can choose to skip screens like Siri, Touch ID, or Location Services to speed up the onboarding process. This "Zero-Touch" approach ensures IT never has to touch the box, significantly reducing deployment costs and time.',
       industrialUseCase: 'A startup with no physical office ships laptops directly from the factory to new hires in 10 different countries. The devices auto-enroll and configure themselves as soon as the user logs in.',
-      keyTakeaways: ['Requires ABM or ASM account', 'MDM profile can be made unremovable', 'Setup Assistant screens can be suppressed', 'Serial numbers must be assigned in ABM first'],
-      visualType: 'diagram'
+      keyTakeaways: ['Requires ABM or ASM account', 'MDM profile can be made unremovable', 'Setup Assistant screens can be suppressed', 'Serial numbers must be assigned in ABM first']
     }]
   },
   {
@@ -104,8 +100,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Jamf allows admins to define exactly how local user accounts are created during the initial setup phase of a Mac or iOS device.',
       detailedExplanation: 'User account configuration is primarily handled within the Jamf Prestage Enrollment settings. Admins can choose to create a hidden "Management Account"—a local administrator that the Jamf Binary uses to perform high-privilege tasks without the user\'s knowledge. For the end-user, the admin can decide if the account they create during Setup Assistant is an Administrator or a Standard User. Creating a Standard User is a common security best practice (Principle of Least Privilege). Additionally, Jamf can integrate with Cloud Identity Providers (IdP) like Okta or Azure AD using "Jamf Connect" to allow users to log in with their corporate email credentials, which then creates a local account that stays in sync with their cloud password. This bridges the gap between local macOS accounts and enterprise directory services.',
       industrialUseCase: 'An organization creates a "TechSupport" admin account on every Mac for hands-on troubleshooting while keeping the actual employee as a Standard User to prevent unauthorized software installs.',
-      keyTakeaways: ['Management Account is for binary tasks', 'Prestage defines user privileges', 'Cloud IDP integration via Jamf Connect', 'Standard vs Admin is a key security decision'],
-      visualType: 'ui'
+      keyTakeaways: ['Management Account is for binary tasks', 'Prestage defines user privileges', 'Cloud IDP integration via Jamf Connect', 'Standard vs Admin is a key security decision']
     }]
   },
   {
@@ -120,8 +115,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Configuration Profiles are the primary way to enforce system settings and restrictions on Apple devices via the native MDM framework.',
       detailedExplanation: 'A Configuration Profile is an XML-based file (.mobileconfig) that contains a set of "Payloads"—key-value pairs that define specific settings like Wi-Fi credentials, VPN configurations, or Passcode requirements. When Jamf pushes a profile, it is delivered over-the-air via the Apple Push Notification service (APNs). On the client Mac, these settings are written to /Library/Managed Preferences/. Managed preferences take precedence over local Plists, effectively "locking" the setting in the UI so the user cannot change it. The `cfprefsd` daemon handles the caching and reading of these preferences. If a user attempts to manually edit a managed plist, the system will revert the change based on the profile instruction. Profiles can be "Scoped" to specific groups of computers or users, ensuring that only relevant settings are applied to the appropriate hardware.',
       industrialUseCase: 'Deploying a "Restricted Software" profile that disables the App Store or specific System Settings like iCloud Drive for contractors who handle sensitive data.',
-      keyTakeaways: ['Delivered via APNs', 'XML structure (.mobileconfig)', 'Managed Preferences take precedence', 'Payloads define specific settings'],
-      visualType: 'plist'
+      keyTakeaways: ['Delivered via APNs', 'XML structure (.mobileconfig)', 'Managed Preferences take precedence', 'Payloads define specific settings']
     }]
   },
   {
@@ -136,8 +130,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Jamf manages the native FileVault 2 encryption engine, ensuring all corporate data is protected at rest with secure key storage.',
       detailedExplanation: 'Full Disk Encryption on macOS is performed by FileVault 2. Jamf triggers this through a Configuration Profile payload. During the encryption process, a Personal Recovery Key (PRK) is generated. A critical feature of Jamf is "Key Escrow": the Jamf Binary captures this PRK and sends it securely to the Jamf Pro database. If a user forgets their password, an IT admin can log into the Jamf Pro console, retrieve the PRK, and use it to unlock the disk. Modern Macs with Apple Silicon or T2 chips use hardware-accelerated encryption, making the process nearly instantaneous. Admins can also use "Institutional Recovery Keys" (IRKs), which is a master key for the whole fleet, though PRKs are generally preferred for higher security as they are unique to each individual device.',
       industrialUseCase: 'A lawyer loses their laptop at an airport. Because FileVault was enforced and the PRK was stored in Jamf, the firm can prove the data was encrypted, avoiding a mandatory data breach notification.',
-      keyTakeaways: ['PRK is unique and escrowed', 'Enforced by MDM Profile', 'Essential for compliance (HIPAA/GDPR)', 'Hardware-backed on modern Macs'],
-      visualType: 'terminal'
+      keyTakeaways: ['PRK is unique and escrowed', 'Enforced by MDM Profile', 'Essential for compliance (HIPAA/GDPR)', 'Hardware-backed on modern Macs']
     }]
   },
   {
@@ -152,8 +145,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'The Volume Purchase Program (VPP) allows organizations to buy, distribute, and reclaim App Store licenses centrally through Jamf.',
       detailedExplanation: 'Organizations purchase app licenses through Apple Business Manager (ABM). These licenses are linked to Jamf Pro using a VPP Token (.vpptoken), which must be renewed every 365 days. Jamf allows for two types of assignment: "User-based" (requires an Apple ID) and "Device-based" (the modern standard). Device-based assignment allows Jamf to push the app directly to the device serial number without requiring the user to sign into the App Store or even have an Apple ID. This is critical for shared iPads or corporate-owned Macs. If a device is retired or the user leaves the company, the license can be "Revoked" in the Jamf console and returned to the license pool, allowing it to be assigned to a new device. This ensures the organization retains ownership of all software purchases.',
       industrialUseCase: 'A hospital deploys a custom medical chart app to 1,000 iPads. Using Device-based VPP, the app installs silently overnight, and no doctor needs to manage an individual Apple ID.',
-      keyTakeaways: ['ABM/ASM Integration', 'Device-based assignment skips Apple ID', 'Licenses are organization-owned', 'VPP Tokens require annual renewal'],
-      visualType: 'ui'
+      keyTakeaways: ['ABM/ASM Integration', 'Device-based assignment skips Apple ID', 'Licenses are organization-owned', 'VPP Tokens require annual renewal']
     }]
   },
   {
@@ -168,8 +160,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Scripting is the "Swiss Army Knife" of Jamf management, allowing admins to automate almost any task that can be performed via the command line.',
       detailedExplanation: 'Jamf policies can execute shell scripts written in Zsh (current default) or Bash. Scripts run with "Root" privileges, meaning they have full access to the system. A key feature is the use of "Parameters": Jamf reserves parameters 1 (mount point), 2 (computer name), and 3 (username), while allowing admins to pass custom data in parameters 4 through 11. This allows a single script to be reused across different policies by just changing the parameter values in the UI. Common commands inside scripts include `jamf recon` (to update inventory), `jamf policy` (to trigger check-ins), and `systemsetup`. Admins should always include a "Shebang" line (e.g., #!/bin/zsh) at the very top of the script to ensure the correct interpreter is used. Scripting is vital for "Extension Attributes"—custom pieces of inventory data that Jamf doesn\'t collect by default, such as battery health or specific app versions.',
       industrialUseCase: 'Writing a script that checks if a specific security software is running. If it isn\'t, the script starts the service and then runs `jamf recon` to notify the server that the device is back in compliance.',
-      keyTakeaways: ['Runs as root user', 'Zsh is the default interpreter', 'Parameters 4-11 are custom', 'Extension Attributes use script output'],
-      visualType: 'terminal'
+      keyTakeaways: ['Runs as root user', 'Zsh is the default interpreter', 'Parameters 4-11 are custom', 'Extension Attributes use script output']
     }]
   },
   {
@@ -184,8 +175,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Modern macOS "Imaging" has been replaced by rapid reset workflows that use native hardware encryption to wipe data in seconds.',
       detailedExplanation: 'Traditional imaging—wiping a drive and dropping a block-copy OS—is deprecated. Modern Macs use a "System Volume" that is cryptographically signed and read-only. To reset a Mac, we use "Erase All Content and Settings" (EACAS). On Macs with Apple Silicon or a T2 chip, Jamf can trigger this via a simple MDM command. The system securely destroys the encryption keys for the "Data Volume," making the data unrecoverable instantly, and then resets the OS to its "Out of Box" state. For older Macs, admins use the `startosinstall` binary with the `--eraseinstall` flag, which downloads a fresh OS installer and wipes the drive before installing. This lifecycle management ensures that when an employee leaves, their device can be prepared for the next user in minutes rather than hours.',
       industrialUseCase: 'A university IT department needs to reset 200 lab computers at the end of the day. They send a single "Remote Wipe" command from the Jamf console, and all 200 Macs are ready for the next class by the time the lab opens.',
-      keyTakeaways: ['EACAS is the modern standard', 'Traditional imaging is dead', 'Remote Wipe uses MDM commands', 'Hardware encryption enables instant wipes'],
-      visualType: 'diagram'
+      keyTakeaways: ['EACAS is the modern standard', 'Traditional imaging is dead', 'Remote Wipe uses MDM commands', 'Hardware encryption enables instant wipes']
     }]
   },
   {
@@ -200,8 +190,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'macOS uses a combination of traditional POSIX permissions and granular Access Control Lists (ACLs) to manage security and access.',
       detailedExplanation: 'POSIX permissions are the foundation: every file has an Owner, a Group, and "Everyone" else. Access is defined by Read (4), Write (2), and Execute (1). For example, "755" means the owner can do everything, while others can only read and execute. Beyond POSIX, macOS uses Access Control Lists (ACLs), which allow you to grant specific permissions to multiple users or groups on a single file—something POSIX cannot do. In Terminal, `ls -la` shows POSIX, while `ls -le` shows ACLs. Ownership is changed via `chown` and permissions via `chmod`. Jamf admins must understand these when packaging software; if a package has incorrect permissions, the app may fail to launch or users may be able to delete critical system files. macOS also utilizes "Permissions Repair" and "System Integrity Protection" (SIP) to prevent even root users from modifying core system folders.',
       industrialUseCase: 'A video production house sets an ACL on their "Final Renders" folder so that the "Editors" group can write files, but the "Marketing" group can only read them, preventing accidental edits to finished work.',
-      keyTakeaways: ['Owner, Group, Everyone model', 'Read/Write/Execute bits', 'ls -le displays ACLs', 'chmod and chown are core tools'],
-      visualType: 'terminal'
+      keyTakeaways: ['Owner, Group, Everyone model', 'Read/Write/Execute bits', 'ls -le displays ACLs', 'chmod and chown are core tools']
     }]
   },
   {
@@ -216,8 +205,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Managing a diverse fleet often involves juggling multiple management platforms and tenant environments to maintain security and isolation.',
       detailedExplanation: 'In an enterprise or MSP environment, admins often manage "Multi-Tenant" setups. In Jamf Pro, this can be done via "Sites"—virtual partitions within one server—or separate Jamf Cloud instances for complete isolation. Increasingly, macOS admins must also manage "Coexistence" with Microsoft Intune. This is often handled via "Jamf Cloud Connector" or "Device Compliance," where Jamf manages the Mac (because it has superior Apple features), but Intune provides the "Conditional Access" check. If Jamf reports a Mac is compliant (encrypted, patched), Intune allows that Mac to access Office 365 data. This ensures that only managed, secure devices can touch company resources. Standardizing these configurations across multiple clients or departments requires strict version control and clear naming conventions for policies and groups.',
       industrialUseCase: 'An MSP manages 50 small business clients. They use one Jamf Pro server with 50 different "Sites" to ensure Client A cannot see Client B\'s devices, but the MSP can manage all of them from one dashboard.',
-      keyTakeaways: ['Sites provide logical separation', 'Intune integration via Cloud Connector', 'Conditional Access enforces compliance', 'Standardization enables scalability'],
-      visualType: 'ui'
+      keyTakeaways: ['Sites provide logical separation', 'Intune integration via Cloud Connector', 'Conditional Access enforces compliance', 'Standardization enables scalability']
     }]
   },
   {
@@ -232,8 +220,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Effective MDM administration is about designing automated lifecycles that keep devices secure and up-to-date with minimal manual work.',
       detailedExplanation: 'Administration begins with designing the "Enrollment" workflow (Prestage). Once enrolled, devices enter a "Maintenance" phase where "Smart Groups" act as the logic engine. A Smart Group might monitor if a Mac is missing a specific security patch; as soon as it is, the Mac "falls into" the group, which triggers a "Patch Policy" to install the update. Troubleshooting these workflows requires an understanding of the communication chain: Device <-> APNs <-> Jamf. If a command isn\'t working, admins check the APNs status (on port 5223) and the local `mdmclient` logs using the `log show` command. Regularly "Cleaning" the environment—deleting old policies, retiring unused packages, and auditing API accounts—is essential for maintaining a fast, reliable management platform.',
       industrialUseCase: 'A Jamf admin designs a "Self-Healing" workflow: an Extension Attribute checks if the antivirus is running. If it stops, the Mac enters a Smart Group that triggers a policy to re-install the AV software automatically.',
-      keyTakeaways: ['Smart Groups provide automation logic', 'APNs is the critical heartbeat', 'mdmclient logs are for troubleshooting', 'Regular maintenance prevents bloat'],
-      visualType: 'diagram'
+      keyTakeaways: ['Smart Groups provide automation logic', 'APNs is the critical heartbeat', 'mdmclient logs are for troubleshooting', 'Regular maintenance prevents bloat']
     }]
   },
   {
@@ -248,8 +235,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Modern packaging utilizes automated tools to fetch, wrap, and deploy applications, removing the need for manual "Download and Upload" cycles.',
       detailedExplanation: 'Admins use "AutoPkg"—an open-source framework—to automate the task of checking for new software versions. AutoPkg uses "Recipes" (XML plists) that tell it where to find the download (e.g., GitHub or a vendor URL), how to verify it, and how to turn it into a Jamf-compatible PKG. These recipes can be integrated into CI/CD pipelines using GitHub Actions or Azure DevOps. When a vendor releases a new version of Chrome, the pipeline automatically detects it, builds the package, uploads it to a "Testing" category in Jamf, and notifies the admin. This "Shift-Left" approach ensures software is patched faster and with fewer human errors. Munki is another common tool used alongside Jamf for its superior "Self-Service" catalog and dependency management, allowing apps to be installed only when certain conditions are met.',
       industrialUseCase: 'An IT team uses AutoPkg to manage 50 common apps (Zoom, Slack, Chrome). Instead of manually updating them every week, the apps are updated automatically by a server, saving the team 10+ hours of manual work every month.',
-      keyTakeaways: ['AutoPkg uses Recipes for automation', 'CI/CD pipelines reduce human error', 'Patch management becomes "Hands-Off"', 'Munki manages complex dependencies'],
-      visualType: 'terminal'
+      keyTakeaways: ['AutoPkg uses Recipes for automation', 'CI/CD pipelines reduce human error', 'Patch management becomes "Hands-Off"', 'Munki manages complex dependencies']
     }]
   },
   {
@@ -264,8 +250,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'The Jamf Pro API allows developers and admins to interact with server data programmatically, enabling massive scale and custom integrations.',
       detailedExplanation: 'Jamf Pro offers two APIs: the "Classic API" (which uses XML) and the modern "Jamf Pro API" (which uses JSON and Bearer Token authentication). The API allows you to perform "CRUD" operations: Create, Read, Update, and Delete records. For example, you can write a Python script that pulls a list of all iPads with low storage and sends a customized notification to those users. Authentication is a key security factor: admins should use "API Roles and Clients" to grant specific, limited permissions (e.g., Read-only access to inventory) rather than using a full admin account. Tooling like "Jamf Pro PowerToys" or custom Swift apps can leverage these APIs to build dashboards or custom inventory portals that aren\'t available in the standard Web UI.',
       industrialUseCase: 'A company integrates Jamf with their HR system (Workday). When an employee is marked as "Terminated" in Workday, a script automatically calls the Jamf API to lock their Mac and trigger a Remote Wipe.',
-      keyTakeaways: ['Classic (XML) vs Pro (JSON) APIs', 'Bearer Token authentication is standard', 'API Roles enforce least privilege', 'Enables integration with HR and Security tools'],
-      visualType: 'terminal'
+      keyTakeaways: ['Classic (XML) vs Pro (JSON) APIs', 'Bearer Token authentication is standard', 'API Roles enforce least privilege', 'Enables integration with HR and Security tools']
     }]
   },
   {
@@ -280,8 +265,7 @@ const JAMF_MODULES: Module[] = [
       moderateExplanation: 'Ensuring your Apple fleet meets global security standards like CIS or NIST through automated enforcement and reporting.',
       detailedExplanation: 'Security compliance is more than just settings; it\'s about "Attestation." Admins use the "macOS Security Compliance Project" (mSCP) to generate tailored security baselines based on frameworks like NIST 800-53 or the CIS Benchmark. These baselines are converted into Configuration Profiles and Scripts that Jamf enforces. Key checks include disabling guest accounts, enforcing a minimum password length, and ensuring "System Integrity Protection" (SIP) is active. To prove compliance for an audit, admins use "Extension Attributes" to collect real-time status of these settings. If a device fails a check, it is flagged in a "Non-Compliant" Smart Group, which can trigger an automated remediation or block access to corporate resources. This creates a "Continuous Compliance" model that is much stronger than once-a-year audits.',
       industrialUseCase: 'A financial services firm must pass a SOC2 audit. They provide a Jamf report showing that 100% of their 5,000 Macs have had a specific security patch applied within 48 hours of release.',
-      keyTakeaways: ['Enforce CIS/NIST benchmarks', 'mSCP automates baseline creation', 'Continuous Compliance via Smart Groups', 'Audit readiness requires accurate inventory data'],
-      visualType: 'ui'
+      keyTakeaways: ['Enforce CIS/NIST benchmarks', 'mSCP automates baseline creation', 'Continuous Compliance via Smart Groups', 'Audit readiness requires accurate inventory data']
     }]
   }
 ];
@@ -300,61 +284,6 @@ async function askAssistant(query: string, context: string): Promise<string> {
 }
 
 // --- 4. Sub-Components ---
-
-const VisualLab = ({ type, title }: { type: Topic['visualType'], title: string }) => {
-  if (type === 'terminal') return (
-    <div className="bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-inner my-6 font-mono text-xs">
-      <div className="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
-        <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"/><div className="w-2.5 h-2.5 rounded-full bg-yellow-500"/><div className="w-2.5 h-2.5 rounded-full bg-green-500"/></div>
-        <span className="text-slate-400 ml-2">Terminal — jamf agent</span>
-      </div>
-      <div className="p-4 space-y-1">
-        <div className="text-green-400">admin@macbook ~ % <span className="text-white">sudo jamf recon</span></div>
-        <div className="text-slate-400">Retrieving inventory attributes from the JSS...</div>
-        <div className="text-slate-400">Locating hardware information...</div>
-        <div className="text-slate-400">Locating software information...</div>
-        <div className="text-blue-400">Inventory updated successfully.</div>
-        <div className="text-green-400">admin@macbook ~ % <span className="text-white">sudo jamf checkJSSConnection</span></div>
-        <div className="text-slate-400">The JSS is available at: https://company.jamfcloud.com/</div>
-      </div>
-    </div>
-  );
-
-  if (type === 'plist') return (
-    <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 my-6 font-mono text-xs overflow-x-auto shadow-inner">
-      <div className="text-blue-600 mb-2 font-bold uppercase text-[10px]">com.apple.managedPreferences.plist</div>
-      <div className="text-slate-800">
-        <div>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</div>
-        <div>&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"&gt;</div>
-        <div className="pl-2">&lt;plist version="1.0"&gt;</div>
-        <div className="pl-4">&lt;dict&gt;</div>
-        <div className="pl-6 text-red-600">&lt;key&gt;PayloadIdentifier&lt;/key&gt;</div>
-        <div className="pl-6">&lt;string&gt;com.jamf.security.baseline.1&lt;/string&gt;</div>
-        <div className="pl-6 text-red-600">&lt;key&gt;PasscodeCompliance&lt;/key&gt;</div>
-        <div className="pl-6">&lt;true/&gt;</div>
-        <div className="pl-6 text-red-600">&lt;key&gt;MinLength&lt;/key&gt;</div>
-        <div className="pl-6">&lt;integer&gt;8&lt;/integer&gt;</div>
-        <div className="pl-4">&lt;/dict&gt;</div>
-        <div className="pl-2">&lt;/plist&gt;</div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 my-6 shadow-sm">
-      <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase mb-4 tracking-tighter">
-        <div className="w-2 h-2 rounded-full bg-blue-500"/> Jamf Pro Interface Preview: {title}
-      </div>
-      <div className="space-y-3">
-        <div className="h-6 w-3/4 bg-slate-100 rounded animate-pulse"/>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="h-20 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-blue-300 text-[10px] font-bold">SMART GROUP LOGIC</div>
-          <div className="h-20 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-slate-300 text-[10px] font-bold">SCOPE: ALL DEVICES</div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const CommentSection = ({ topicId }: { topicId: string }) => {
   const [comments, setComments] = useState<string[]>([]);
@@ -438,7 +367,7 @@ const App = () => {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans">
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white border-r border-slate-200 transition-transform duration-300 ease-in-out ${sidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-slate-200 transition-transform duration-300 ease-in-out ${sidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-8 h-full flex flex-col">
           <div className="flex items-center gap-4 mb-10">
             <div className="bg-blue-600 p-2.5 rounded-[1.2rem] shadow-2xl shadow-blue-200">
@@ -542,15 +471,6 @@ const App = () => {
 
                     <div className={`p-10 rounded-[2rem] mb-10 leading-relaxed transition-all ${level === 'detail' ? 'bg-slate-900 text-slate-300 font-medium text-lg border-none shadow-2xl' : 'bg-slate-50 text-slate-700 text-xl'}`}>
                       {text}
-                    </div>
-
-                    <div className="bg-blue-50/50 p-8 rounded-[2rem] border border-blue-100 mb-10">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg"><Lightbulb className="w-6 h-6"/></div>
-                        <h4 className="text-xl font-black text-slate-900 leading-none">Visual Lab: Example Structure</h4>
-                      </div>
-                      <VisualLab type={t.visualType} title={t.title}/>
-                      <p className="text-xs text-blue-400 font-bold uppercase tracking-widest mt-4">Pro Tip: {t.keyTakeaways[0]}</p>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6 mb-10">
