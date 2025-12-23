@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Module } from '../types';
+import { Module } from '../types.ts';
 import { BookOpen, GraduationCap, ChevronRight, Menu, X, Search, CheckCircle, Sparkles, Send } from 'lucide-react';
 
 interface LayoutProps {

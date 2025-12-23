@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Topic } from '../types';
+import { Topic } from '../types.ts';
 import { CheckCircle2, HelpCircle, Layers, Info, ListTree, Briefcase, Check } from 'lucide-react';
 
 interface ModuleContentProps {

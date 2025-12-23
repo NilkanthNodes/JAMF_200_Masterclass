@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { generateScenario } from '../services/gemini';
+import { generateScenario } from '../services/gemini.ts';
 import { Terminal, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ScenarioViewProps {

@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { QuizQuestion } from '../types';
-import { generateQuiz } from '../services/gemini';
+import { QuizQuestion } from '../types.ts';
+import { generateQuiz } from '../services/gemini.ts';
 import { Check, X, RefreshCw, Trophy, BrainCircuit } from 'lucide-react';
 
 interface QuizViewProps {

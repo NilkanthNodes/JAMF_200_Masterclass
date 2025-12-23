@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuizQuestion } from "../types";
+import { QuizQuestion } from "../types.ts";
 
 const MODEL_NAME = 'gemini-3-flash-preview';
 
