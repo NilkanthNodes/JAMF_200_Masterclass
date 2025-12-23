@@ -1,35 +1,54 @@
 
 import React from 'react';
 import { generateScenario } from '../services/gemini';
-import { Terminal, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
+import { Module } from '../types';
+import { Terminal, Lightbulb, ChevronDown, ChevronUp, ShieldCheck, BrainCircuit } from 'lucide-react';
 
 interface ScenarioViewProps {
-  moduleTitle: string;
+  module: Module;
 }
 
-const ScenarioView: React.FC<ScenarioViewProps> = ({ moduleTitle }) => {
+const ScenarioView: React.FC<ScenarioViewProps> = ({ module }) => {
   const [scenario, setScenario] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
   const [showResolution, setShowResolution] = React.useState(false);
+  const [isAiGenerated, setIsAiGenerated] = React.useState(false);
 
-  const fetchScenario = async () => {
+  const loadInitialScenario = () => {
+    if (module.staticScenario) {
+      setScenario(module.staticScenario);
+      setIsAiGenerated(false);
+    } else {
+      fetchAiScenario();
+    }
+  };
+
+  const fetchAiScenario = async () => {
     setLoading(true);
     setScenario(null);
     setShowResolution(false);
     try {
-      const res = await generateScenario(moduleTitle);
-      setScenario(res);
+      const res = await generateScenario(module.title);
+      if (res) {
+        setScenario(res);
+        setIsAiGenerated(true);
+      } else {
+        setScenario(module.staticScenario || "No scenario available.");
+        setIsAiGenerated(false);
+      }
     } catch (e) {
       console.error(e);
+      setScenario(module.staticScenario || "No scenario available.");
+      setIsAiGenerated(false);
     } finally {
       setLoading(false);
     }
   };
 
   React.useEffect(() => {
-    fetchScenario();
+    loadInitialScenario();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleTitle]);
+  }, [module.id]);
 
   if (loading) {
     return (
@@ -43,9 +62,20 @@ const ScenarioView: React.FC<ScenarioViewProps> = ({ moduleTitle }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
-        <div className="p-4 bg-slate-800 flex items-center gap-3">
-          <Terminal className="w-5 h-5 text-green-400" />
-          <span className="text-slate-300 font-mono text-sm tracking-wider uppercase">Practical Scenario Generator</span>
+        <div className="p-4 bg-slate-800 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Terminal className="w-5 h-5 text-green-400" />
+            <span className="text-slate-300 font-mono text-sm tracking-wider uppercase">Practical Scenario</span>
+          </div>
+          {isAiGenerated ? (
+            <span className="text-[10px] bg-blue-900/50 text-blue-400 border border-blue-800 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+              <BrainCircuit className="w-3 h-3" /> AI Generated
+            </span>
+          ) : (
+            <span className="text-[10px] bg-green-900/50 text-green-400 border border-green-800 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" /> Verified Lab
+            </span>
+          )}
         </div>
         <div className="p-8 md:p-12">
           <div className="prose prose-invert max-w-none prose-headings:text-blue-400 prose-p:text-slate-300 prose-strong:text-white">
@@ -82,10 +112,10 @@ const ScenarioView: React.FC<ScenarioViewProps> = ({ moduleTitle }) => {
       
       <div className="flex justify-center">
         <button 
-          onClick={fetchScenario}
+          onClick={fetchAiScenario}
           className="text-slate-500 hover:text-blue-600 font-medium text-sm flex items-center gap-2"
         >
-          Generate Different Scenario
+          <BrainCircuit className="w-4 h-4" /> Generate Different AI Scenario
         </button>
       </div>
     </div>

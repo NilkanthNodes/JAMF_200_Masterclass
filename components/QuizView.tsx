@@ -1,38 +1,58 @@
 
 import React from 'react';
-import { QuizQuestion } from '../types';
+import { QuizQuestion, Module } from '../types';
 import { generateQuiz } from '../services/gemini';
-import { Check, X, RefreshCw, Trophy, BrainCircuit } from 'lucide-react';
+import { Check, X, RefreshCw, Trophy, BrainCircuit, ShieldCheck } from 'lucide-react';
 
 interface QuizViewProps {
-  moduleTitle: string;
-  moduleContent: string;
+  module: Module;
 }
 
-const QuizView: React.FC<QuizViewProps> = ({ moduleTitle, moduleContent }) => {
+const QuizView: React.FC<QuizViewProps> = ({ module }) => {
   const [questions, setQuestions] = React.useState<QuizQuestion[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
   const [answers, setAnswers] = React.useState<Record<number, number>>({});
   const [showResults, setShowResults] = React.useState(false);
+  const [isAiGenerated, setIsAiGenerated] = React.useState(false);
 
-  const fetchQuiz = async () => {
+  const loadInitialQuiz = () => {
+    if (module.staticQuizzes && module.staticQuizzes.length > 0) {
+      setQuestions(module.staticQuizzes);
+      setIsAiGenerated(false);
+      setLoading(false);
+    } else {
+      fetchAiQuiz();
+    }
+  };
+
+  const fetchAiQuiz = async () => {
     setLoading(true);
     setShowResults(false);
     setAnswers({});
     try {
-      const qs = await generateQuiz(moduleTitle, moduleContent);
-      setQuestions(qs);
+      const content = module.topics.map(t => t.shortExplanation + t.moderateExplanation).join(' ');
+      const qs = await generateQuiz(module.title, content);
+      if (qs && qs.length > 0) {
+        setQuestions(qs);
+        setIsAiGenerated(true);
+      } else {
+        // Fallback to static if AI fails
+        setQuestions(module.staticQuizzes || []);
+        setIsAiGenerated(false);
+      }
     } catch (e) {
       console.error(e);
+      setQuestions(module.staticQuizzes || []);
+      setIsAiGenerated(false);
     } finally {
       setLoading(false);
     }
   };
 
   React.useEffect(() => {
-    fetchQuiz();
+    loadInitialQuiz();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleTitle]);
+  }, [module.id]);
 
   if (loading) {
     return (
@@ -47,8 +67,10 @@ const QuizView: React.FC<QuizViewProps> = ({ moduleTitle, moduleContent }) => {
   if (questions.length === 0) {
     return (
       <div className="text-center py-20 bg-white rounded-3xl border border-slate-200">
-        <p className="text-slate-500 mb-4">Oops! Couldn't generate questions this time.</p>
-        <button onClick={fetchQuiz} className="text-blue-600 font-bold hover:underline">Try Again</button>
+        <p className="text-slate-500 mb-4">No practice questions available for this module yet.</p>
+        <button onClick={fetchAiQuiz} className="text-blue-600 font-bold hover:underline flex items-center gap-2 mx-auto">
+          <BrainCircuit className="w-4 h-4" /> Try AI Generation
+        </button>
       </div>
     );
   }
@@ -70,15 +92,25 @@ const QuizView: React.FC<QuizViewProps> = ({ moduleTitle, moduleContent }) => {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold text-slate-900">Module Knowledge Check</h3>
-          <p className="text-slate-500">3 AI-generated practice questions</p>
+          <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            Practice Quiz
+            {isAiGenerated ? (
+              <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-wider">AI Generated</span>
+            ) : (
+              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" /> Verified Curriculum
+              </span>
+            )}
+          </h3>
+          <p className="text-slate-500">{questions.length} Exam-style questions</p>
         </div>
         <button 
-          onClick={fetchQuiz}
-          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-          title="Regenerate Quiz"
+          onClick={fetchAiQuiz}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-500 hover:text-blue-600 border border-slate-200 rounded-xl hover:border-blue-200 transition-all"
+          title="Regenerate with AI"
         >
-          <RefreshCw className="w-5 h-5" />
+          <RefreshCw className="w-4 h-4" />
+          <span className="hidden sm:inline">AI Regenerate</span>
         </button>
       </div>
 
@@ -143,10 +175,13 @@ const QuizView: React.FC<QuizViewProps> = ({ moduleTitle, moduleContent }) => {
             {calculateScore() === questions.length ? "Perfect! You're ready for the exam." : "Good effort. Keep reviewing those concepts!"}
           </p>
           <button
-            onClick={fetchQuiz}
+            onClick={() => {
+              setAnswers({});
+              setShowResults(false);
+            }}
             className="px-8 py-3 bg-white text-slate-900 font-bold rounded-full hover:bg-slate-100 transition-colors"
           >
-            Try New Questions
+            Retake Quiz
           </button>
         </div>
       )}

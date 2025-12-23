@@ -49,7 +49,7 @@ const App: React.FC = () => {
       const response = await askAssistant(query, `Current Module: ${currentModule.title}`);
       setAiResponse(response);
     } catch (e) {
-      setAiResponse("Sorry, I encountered an error while searching. Please try again.");
+      setAiResponse("Sorry, I encountered an error while searching. Please ensure an API key is configured or check your connection.");
     } finally {
       setAiLoading(false);
     }
@@ -143,19 +143,18 @@ const App: React.FC = () => {
 
         {viewState === 'quiz' && (
           <QuizView 
-            moduleTitle={currentModule.title} 
-            moduleContent={currentModule.topics.map(t => t.shortExplanation + t.moderateExplanation).join(' ')} 
+            module={currentModule}
           />
         )}
 
         {viewState === 'scenario' && (
-          <ScenarioView moduleTitle={currentModule.title} />
+          <ScenarioView module={currentModule} />
         )}
       </div>
 
       <footer className="mt-20 border-t border-slate-100 pt-10 text-center">
         <p className="text-slate-400 text-sm">
-          Jamf 200 Offline Expert Guide • AI Assistant Powered by Gemini 2.5
+          Jamf 200 Hybrid Study Guide • Verified Static Content + AI Enhanced Features
         </p>
       </footer>
     </Layout>
