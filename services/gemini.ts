@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuizQuestion } from "../types.ts";
+import { QuizQuestion } from "../types";
 
 const MODEL_NAME = 'gemini-3-flash-preview';
 
@@ -44,7 +44,7 @@ export async function generateQuiz(moduleTitle: string, content: string): Promis
   });
 
   try {
-    return JSON.parse(response.text || '[]');
+    return JSON.parse(response.text.trim());
   } catch (e) {
     console.error("Failed to parse quiz JSON", e);
     return [];

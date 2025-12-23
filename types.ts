@@ -4,8 +4,6 @@ export interface Module {
   title: string;
   description: string;
   topics: Topic[];
-  staticQuizzes?: QuizQuestion[];
-  staticScenario?: string;
 }
 
 export interface Topic {
