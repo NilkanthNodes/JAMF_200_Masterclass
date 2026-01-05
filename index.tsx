@@ -3,10 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   GraduationCap, Menu, X, CheckCircle, Sparkles, Send, CheckCircle2, 
-  Layers, Info, ListTree, Briefcase, Check, Loader2, ShieldCheck, 
-  Cpu, Settings, Package, UserCheck, Network, Settings2, Workflow, Globe, Eye, Bot
+  Briefcase, Loader2, ShieldCheck, Cpu, Package, UserCheck, 
+  Network, Settings2, Workflow, Globe, Eye, Bot
 } from 'lucide-react';
-import { GoogleGenAI, Chat } from "@google/genai";
+import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 
 // --- Types & Interfaces ---
 
@@ -47,7 +47,7 @@ const JAMF_MODULES: Module[] = [
       title: 'Server Architecture',
       shortExplanation: 'Jamf Pro is a Java web app running on Tomcat with a MySQL database.',
       moderateExplanation: 'The Jamf Pro server (JSS) is built on a high-performance Java stack using Apache Tomcat and MySQL/MariaDB.',
-      detailedExplanation: 'Jamf Pro functions as a Java Web Archive (WAR) file deployed within an Apache Tomcat environment. The Tomcat server manages HTTPS traffic (typically on port 443) for both administrative access and device check-ins. The MySQL database schema contains every object in the environment—from computer inventory records to policy definitions and FileVault recovery keys. On macOS, the Jamf agent binary communicates with the server via the REST API and a specific tasking protocol. On iOS, communication happens strictly via the Apple MDM protocol. Critical server file paths include /Library/JSS/ (on macOS servers) or /var/lib/jamf/ (on Linux servers) where log files and database configuration (DataBase.xml) are stored.',
+      detailedExplanation: 'Jamf Pro functions as a Java Web Archive (WAR) file deployed within an Apache Tomcat environment. The Tomcat server manages HTTPS traffic (typically on port 443) for both administrative access and device check-ins. The MySQL database schema contains every object in the environment—from computer inventory records to policy definitions and FileVault recovery keys. On macOS, the Jamf agent binary communicates with the server via the REST API and a specific tasking protocol. On iOS, communication happens strictly via the Apple MDM protocol. Critical server file paths include /Library/JSS/ (on macOS servers) or /var/lib/jamf/ (on Linux servers) where log files and database configuration (DataBase.xml) are stored. For cloud-hosted environments, Jamf manages the underlying AWS infrastructure, providing automatic scaling and redundant data centers. Understanding the certificate chain between the server and the device is crucial for successful check-ins.',
       industrialUseCase: 'Large enterprises use Jamf Cloud for global availability, ensuring that a remote worker in Tokyo and an admin in London can both reach the server simultaneously without latency.',
       keyTakeaways: ['Java/Tomcat/MySQL Stack', 'Port 443 required for MDM', 'WAR file acts as application layer', 'Database stores all persistent settings']
     }]
@@ -62,7 +62,7 @@ const JAMF_MODULES: Module[] = [
       title: 'PKG vs DMG',
       shortExplanation: '.pkg is an installer; .dmg is a disk image.',
       moderateExplanation: 'Packages (.pkg) are standard Apple flat installers supporting complex logic. Disk Images (.dmg) are virtual volumes for direct file deployments.',
-      detailedExplanation: 'A .pkg file is a structured container used by the Apple Installer service (/usr/sbin/installer). It can include "Preinstall" and "Postinstall" scripts that run before and after the binary payload is dropped. A .dmg is a compressed image of a filesystem. When Jamf deploys a DMG, it mounts the image to a temporary path, copies the files to the destination, and then unmounts it. Jamf Composer is the gold standard tool for creating both, using "Snapshots" to capture exact filesystem changes.',
+      detailedExplanation: 'A .pkg file is a structured container used by the Apple Installer service (/usr/sbin/installer). It can include "Preinstall" and "Postinstall" scripts that run before and after the binary payload is dropped. This is essential for apps that need to register a license or stop a service before updating. A .dmg is a compressed image of a filesystem. When Jamf deploys a DMG, it mounts the image to a temporary path, copies the files to the destination, and then unmounts it. Jamf Composer is the gold standard tool for creating both, using "Snapshots" to capture exact filesystem changes by comparing the state before and after an installation. PKGs are generally preferred for enterprise use as they are native to the macOS installation framework and leave proper receipts in /var/db/receipts.',
       industrialUseCase: 'Use a PKG for a security agent to ensure a registration script runs post-install; use a DMG for corporate fonts that simply need to be copied into /Library/Fonts.',
       keyTakeaways: ['PKG supports pre/post-install logic', 'DMG is for simple file-to-file copy', 'Composer is used for Snapshotting', 'Installer service handles PKG execution']
     }]
@@ -77,7 +77,7 @@ const JAMF_MODULES: Module[] = [
       title: 'ADE (DEP) Workflow',
       shortExplanation: 'ABM + Jamf = Zero-Touch Setup.',
       moderateExplanation: 'Automated Device Enrollment (ADE) links hardware purchases directly to Jamf via Apple Business Manager.',
-      detailedExplanation: 'The workflow starts in Apple Business Manager (ABM) where serial numbers are assigned to the Jamf Pro MDM server. When a user powers on a new Mac, it connects to Wi-Fi and queries Apple’s servers, which redirect it to the Jamf Prestage Enrollment URL. The device downloads the Management Profile, making management mandatory and unremovable. During this setup, admins can choose to skip screens like Siri or Touch ID to speed up onboarding.',
+      detailedExplanation: 'The workflow starts in Apple Business Manager (ABM) where serial numbers are assigned to the Jamf Pro MDM server. When a user powers on a new Mac, it connects to Wi-Fi and queries Apple’s servers, which redirect it to the Jamf Prestage Enrollment URL. The device downloads the Management Profile, making management mandatory and unremovable. During this setup, admins can choose to skip screens like Siri, Apple ID, or Touch ID to speed up onboarding. This "Zero-Touch" method ensures the device is under corporate control from the very first boot. The device becomes "Supervised," giving the admin deeper control over system-level settings that are otherwise restricted.',
       industrialUseCase: 'A startup ships laptops directly from the factory to new hires globally. The devices auto-enroll and configure themselves as soon as the user logs in.',
       keyTakeaways: ['Requires ABM or ASM account', 'MDM profile can be made unremovable', 'Setup Assistant screens can be suppressed', 'Serial numbers assigned in ABM first']
     }]
@@ -92,7 +92,7 @@ const JAMF_MODULES: Module[] = [
       title: 'Multi-Tenant & Baseline Strategy',
       shortExplanation: 'Managing Jamf Pro and Intune across multiple client tenants.',
       moderateExplanation: 'Admins handle multi-tenant Jamf Pro (on-prem/cloud) and Microsoft Intune for diverse client bases.',
-      detailedExplanation: 'Client environment management involves handling onboarding, configuration, and deployment of macOS management policies across distinct tenants. Admins must standardize and maintain macOS baseline configurations to ensure consistent policy enforcement, device compliance, and endpoint security per client SLAs. This requires deep understanding of Site-based management in Jamf and cross-platform synchronization with Intune.',
+      detailedExplanation: 'Client environment management involves handling onboarding, configuration, and deployment of macOS management policies across distinct tenants. Admins must standardize and maintain macOS baseline configurations to ensure consistent policy enforcement, device compliance, and endpoint security per client SLAs. This requires a deep understanding of Site-based management in Jamf Pro to logically separate departments or clients within a single JSS instance. For Intune integration, admins use the Jamf Cloud Connector to sync inventory and enforce conditional access. Maintaining a consistent "Golden Baseline" across thousands of devices requires disciplined use of Smart Groups and Configuration Profiles that automatically remediate when a device drifts from the standard.',
       industrialUseCase: 'An MSP manages 50 clients from one Jamf instance using Sites, enforcing a strict security baseline while allowing custom app catalogs for each client.',
       keyTakeaways: ['Manage multi-tenant Jamf and Intune', 'Standardize macOS baseline configs', 'Enforce compliance per client SLAs', 'Handle structured client onboarding']
     }]
@@ -107,7 +107,7 @@ const JAMF_MODULES: Module[] = [
       title: 'Workflows & ABM Integration',
       shortExplanation: 'Provisioning, compliance, and patching cycles.',
       moderateExplanation: 'Designing automated MDM workflows ensures devices are provisioned correctly and remain patched.',
-      detailedExplanation: 'MDM Administration focuses on implementing workflows for provisioning, compliance, and patching. This requires integration with ABM for DEP and VPP. Admins manage certificates (APNs, SCEP), configuration profiles, and device identity integrations across client environments. Troubleshooting involves diagnosing MDM command failures and profile deployment issues using console logs and APNs status checks.',
+      detailedExplanation: 'MDM Administration focuses on implementing workflows for provisioning, compliance, and patching. This requires integration with ABM for DEP and VPP. Admins manage certificates (APNs, SCEP), configuration profiles, and device identity integrations (Kerberos, Azure AD) across client environments. Troubleshooting involves diagnosing MDM command failures and profile deployment issues using console logs and APNs status checks. The "Management Heartbeat" is maintained via the APNs protocol on port 5223. If a device misses its check-in window, the admin must identify if the issue is network-related, certificate expiration, or a stalled mdmclient daemon on the local OS.',
       industrialUseCase: 'An admin designs a "Self-Healing" workflow where missing security profiles are automatically re-pushed during the next device check-in.',
       keyTakeaways: ['ABM Integration for DEP/VPP', 'Manage certs and device identity', 'Troubleshoot MDM command failures', 'Maintain automated patching workflows']
     }]
@@ -122,7 +122,7 @@ const JAMF_MODULES: Module[] = [
       title: 'Advanced Packaging & CI/CD',
       shortExplanation: 'Automated packaging with Munki, AutoPkg, and GitHub Actions.',
       moderateExplanation: 'Modern packaging uses automated pipelines to fetch, wrap, and deploy applications without manual labor.',
-      detailedExplanation: 'Admins develop and maintain macOS application packages (.pkg, .dmg) using Munki, AutoPkg, or Jamf Composer. The modern standard is to automate these pipelines via GitHub Actions or Azure DevOps. This involves maintaining version-controlled software repositories and building post-install/remediation scripts to enhance deployment reliability.',
+      detailedExplanation: 'Admins develop and maintain macOS application packages (.pkg, .dmg) using Munki, AutoPkg, or Jamf Composer. The modern standard is to automate these pipelines via GitHub Actions or Azure DevOps. This involves maintaining version-controlled software repositories and building post-install/remediation scripts to enhance deployment reliability. By moving away from manual "Download and Upload" cycles, IT teams can respond to zero-day browser vulnerabilities in minutes. CI/CD pipelines ensure that every package is signed with a valid Developer ID Installer certificate before it reaches the Jamf Distribution Points, preventing Gatekeeper blocks during installation.',
       industrialUseCase: 'An AutoPkg recipe automatically downloads the latest Zoom update, wraps it in a signed PKG, and uploads it to Jamf for testing every Saturday.',
       keyTakeaways: ['Use Munki, AutoPkg, and Composer', 'Automate via GitHub Actions/Azure DevOps', 'Version-control software repositories', 'Build remediation scripts']
     }]
@@ -137,7 +137,7 @@ const JAMF_MODULES: Module[] = [
       title: 'Custom Tools & APIs',
       shortExplanation: 'Automating configuration with Zsh, Python, and Jamf API.',
       moderateExplanation: 'Scripting extends Jamf capabilities, allowing for custom logic and advanced reporting.',
-      detailedExplanation: 'Admins create Bash, Zsh, and Python scripts to automate configuration and compliance checks. They build custom tools leveraging APIs from Jamf, Intune, and Munki for reporting and health monitoring. Implementing CI/CD processes for these scripts ensures updates are promoted between environments (Dev to Prod) safely and with full version history.',
+      detailedExplanation: 'Admins create Bash, Zsh, and Python scripts to automate configuration and compliance checks. They build custom tools leveraging APIs from Jamf, Intune, and Munki for reporting and health monitoring. Implementing CI/CD processes for these scripts ensures updates are promoted between environments (Dev to Prod) safely and with full version history. Since macOS Monterey, Zsh is the default shell, and Python 2 has been removed, requiring admins to install Python 3 manually or migrate to Zsh logic. API calls use Bearer Tokens for security, and admins use tools like Postman or custom Python modules to batch-update computer records or trigger remote commands in bulk.',
       industrialUseCase: 'A Python script calls the Jamf API daily to find devices with low disk space and triggers a Slack notification to the assigned user.',
       keyTakeaways: ['Bash, Zsh, and Python scripting', 'Build custom reporting tools', 'Leverage Jamf/Intune/Munki APIs', 'Implement CI/CD for script updates']
     }]
@@ -152,7 +152,7 @@ const JAMF_MODULES: Module[] = [
       title: 'Baselines & Device Attestation',
       shortExplanation: 'Enforcing CIS benchmarks and attestation.',
       moderateExplanation: 'Security involves enforcement and the ability to prove compliance through attestation and reporting.',
-      detailedExplanation: 'Admins enforce client-specific security baselines, FileVault encryption, and compliance policies. They implement device attestation, inventory accuracy monitoring, and compliance reporting for audits. This includes supporting vulnerability remediation and coordinating with security teams for SOC2 or HIPAA compliance audits.',
+      detailedExplanation: 'Admins enforce client-specific security baselines, FileVault encryption, and compliance policies. They implement device attestation, inventory accuracy monitoring, and compliance reporting for audits. This includes supporting vulnerability remediation and coordinating with security teams for SOC2 or HIPAA compliance audits. Device Attestation utilizes the Secure Enclave on Apple Silicon or T2 chips to provide cryptographic proof of identity and integrity. This prevents "cloned" or compromised devices from accessing corporate resources. Admins use Extension Attributes to collect deep security data, such as the status of System Integrity Protection (SIP) or the presence of a Firewall, providing real-time compliance dashboards.',
       industrialUseCase: 'During a security audit, the Jamf admin provides a report showing 100% encryption status with escrowed recovery keys as cryptographic proof.',
       keyTakeaways: ['Enforce FileVault and Passcode policies', 'Maintain device attestation', 'Support vulnerability remediation', 'Coordinate compliance audits']
     }]
@@ -315,19 +315,25 @@ const ChatOverlay = ({ topic, onClose }: { topic: Topic, onClose: () => void }) 
   useEffect(() => {
     const initChat = async () => {
       try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+        const apiKey = process.env.API_KEY;
+        if (!apiKey) {
+           throw new Error("Missing API Key");
+        }
+        const ai = new GoogleGenAI({ apiKey });
+        // Use synchronous chat creation
         chatRef.current = ai.chats.create({
           model: 'gemini-3-flash-preview',
           config: {
             systemInstruction: `You are a Jamf Certified Expert Tutor. 
             Topic: "${topic.title}". 
-            Context: "${topic.detailedExplanation}". 
-            Explain complex Jamf concepts clearly for technical certification prep. Use markdown.`,
+            Current Detail: "${topic.detailedExplanation}". 
+            Goal: Answer technical questions specifically about Jamf Pro management. Use Markdown.`,
           },
         });
-        setMessages([{ role: 'model', text: `Hi! Let's dive deep into **${topic.title}**. What technical detail can I clarify?`, timestamp: Date.now() }]);
+        setMessages([{ role: 'model', text: `Hi! Let's dive deep into **${topic.title}**. What technical detail can I clarify for your certification study?`, timestamp: Date.now() }]);
       } catch (e) {
-        setMessages([{ role: 'model', text: "AI Tutor connection error. Please try again later.", timestamp: Date.now() }]);
+        console.error("AI Initialization Error:", e);
+        setMessages([{ role: 'model', text: "AI Tutor connection error. Please ensure your environment is configured correctly and try again.", timestamp: Date.now() }]);
       }
     };
     initChat();
@@ -343,10 +349,12 @@ const ChatOverlay = ({ topic, onClose }: { topic: Topic, onClose: () => void }) 
     setMessages(prev => [...prev, { role: 'user', text: userMsg, timestamp: Date.now() }]);
     setLoading(true);
     try {
-      const result = await chatRef.current.sendMessage({ message: userMsg });
-      setMessages(prev => [...prev, { role: 'model', text: result.text || "No response.", timestamp: Date.now() }]);
+      const response = await chatRef.current.sendMessage({ message: userMsg });
+      const text = response.text || "I'm having trouble processing that response. Can you rephrase?";
+      setMessages(prev => [...prev, { role: 'model', text, timestamp: Date.now() }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'model', text: "Connection error. Please try again.", timestamp: Date.now() }]);
+      console.error("Chat Error:", err);
+      setMessages(prev => [...prev, { role: 'model', text: "I encountered a communication error. Please try again.", timestamp: Date.now() }]);
     } finally { setLoading(false); }
   };
 
@@ -379,8 +387,14 @@ const ChatOverlay = ({ topic, onClose }: { topic: Topic, onClose: () => void }) 
           )}
         </div>
         <form onSubmit={send} className="p-4 bg-white border-t border-slate-100 flex gap-2">
-          <input value={input} onChange={e => setInput(e.target.value)} placeholder="Type a technical question..." className="flex-1 bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-50" />
-          <button type="submit" disabled={loading} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700">
+          <input 
+            value={input} 
+            onChange={e => setInput(e.target.value)} 
+            placeholder="Type a technical question..." 
+            className="flex-1 bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-50" 
+            autoFocus
+          />
+          <button type="submit" disabled={loading || !input.trim()} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5"/>}
           </button>
         </form>
